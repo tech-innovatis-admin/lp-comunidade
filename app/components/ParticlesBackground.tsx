@@ -33,7 +33,7 @@ export default function ParticlesBackground() {
           opacity: { value: 0.15 },
           size: { value: 1.5 },
           links: { enable: true, distance: 120, color: '#ffffff', opacity: 0.2, width: 0.5 },
-          move: { enable: true, speed: 0.25, outModes: { default: 'out' } },
+          move: { enable: true, speed: 0.25, outModes: { default: 'out' as const } },
         },
         detectRetina: true,
       }
@@ -46,7 +46,7 @@ export default function ParticlesBackground() {
           opacity: { value: 0.2 },
           size: { value: 2 },
           links: { enable: true, distance: 150, color: '#ffffff', opacity: 0.25, width: 1 },
-          move: { enable: true, speed: 0.25, outModes: { default: 'out' } },
+          move: { enable: true, speed: 0.25, outModes: { default: 'out' as const } },
         },
         detectRetina: true,
       }
