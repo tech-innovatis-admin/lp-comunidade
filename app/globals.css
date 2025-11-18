@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+/* Fontes Poppins Locais */
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/Poppins/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --background: #121826;
+  --foreground: #ededed;
+  --font-poppins: 'Poppins', system-ui, sans-serif;
+  --whatsapp-green: #25D366;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Poppins', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Aplicação universal da fonte Poppins */
+* {
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Otimizações para Mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.hover-effect {
+  transition: all 0.3s ease;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* Otimização de performance para animações */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.title-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--title-color-start, #8e9eab) 0%,
+    var(--title-color-end, #eef2f3) 40%,
+    #ffffff 50%,
+    var(--title-color-end, #eef2f3) 60%,
+    var(--title-color-start, #8e9eab) 100%
+  );
+  background-size: 200% 100%;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shimmer 6s infinite linear;
+  display: inline-block;
+  pointer-events: none;
+}
+
+.hover-effect-blue:hover {
+  color: #3b82f6;
+}
+
+.hover-effect-green:hover {
+  color: #10b981;
+}
+
+.hover-effect-gold:hover {
+  color: #eab308;
+}
+
+/* Removido - arquivos stars.png não existem */
+
+/* Estilos 3D para os cards */
+.text-shadow-sm {
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Efeito de profundidade para cards */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Classe de perspectiva para o container dos cards */
+.perspective-container {
+  perspective: 1000px;
+}
+
+/* Efeito de reflexo para os cards */
+.reflection::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent);
+  transform: rotateX(180deg);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Ajuste do tamanho da fonte dos títulos das plataformas (redução de 3%) */
+.platform-title {
+  font-size: 97%;  /* 100% - 3% = 97% */
+}
