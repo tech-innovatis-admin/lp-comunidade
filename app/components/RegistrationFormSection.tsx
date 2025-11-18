@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2 } from 'lucide-react'
 import IdentityUploadSection from './IdentityUploadSection'
+import TermsModal from './TermsModal'
+import ConfettiEffect from './ConfettiEffect'
 
 export default function RegistrationFormSection() {
   const [formData, setFormData] = useState({
@@ -17,13 +19,14 @@ export default function RegistrationFormSection() {
   })
 
   const [terms, setTerms] = useState({
-    termosUso: false,
-    politicaPrivacidade: false,
-    comunidade: false
+    termoAdesao: false
   })
 
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [hasShownConfetti, setHasShownConfetti] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -41,11 +44,41 @@ export default function RegistrationFormSection() {
     }
   }
 
-  const handleCheckboxChange = (name: string) => {
+  const handleCheckboxChange = () => {
     setTerms(prev => ({
       ...prev,
-      [name]: !prev[name as keyof typeof prev]
+      termoAdesao: !prev.termoAdesao
     }))
+    if (errors.termoAdesao) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors.termoAdesao
+        return newErrors
+      })
+    }
+  }
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+  }
+
+  const handleAcceptTerms = () => {
+    setTerms(prev => ({
+      ...prev,
+      termoAdesao: true
+    }))
+    setIsModalOpen(false)
+    if (errors.termoAdesao) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors.termoAdesao
+        return newErrors
+      })
+    }
   }
 
   const formatCPF = (value: string) => {
@@ -77,7 +110,7 @@ export default function RegistrationFormSection() {
     const telefoneValido = formData.telefone.replace(/\D/g, '').length >= 10
     const emailValido = formData.email.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
     const enderecoValido = formData.endereco.trim() !== ''
-    const termosValidos = terms.termosUso && terms.politicaPrivacidade && terms.comunidade
+    const termosValidos = terms.termoAdesao
 
     return nomeValido && profissaoValida && cpfValido && telefoneValido && emailValido && enderecoValido && termosValidos
   }
@@ -115,16 +148,8 @@ export default function RegistrationFormSection() {
       newErrors.endereco = 'Endereço é obrigatório'
     }
 
-    if (!terms.termosUso) {
-      newErrors.termosUso = 'Você deve aceitar os termos de uso'
-    }
-
-    if (!terms.politicaPrivacidade) {
-      newErrors.politicaPrivacidade = 'Você deve aceitar a política de privacidade'
-    }
-
-    if (!terms.comunidade) {
-      newErrors.comunidade = 'Você deve aceitar os termos da comunidade'
+    if (!terms.termoAdesao) {
+      newErrors.termoAdesao = 'Você deve aceitar o Termo de Adesão, Reciprocidade e Compromisso de Repasse'
     }
 
     setErrors(newErrors)
@@ -144,28 +169,41 @@ export default function RegistrationFormSection() {
     // Por enquanto, apenas simula o envio
     setTimeout(() => {
       setIsSubmitting(false)
-      alert('Formulário enviado com sucesso! Em breve entraremos em contato.')
-      // Reset form
-      setFormData({
-        nomeCompleto: '',
-        profissao: '',
-        empresa: '',
-        cpf: '',
-        telefone: '',
-        email: '',
-        endereco: '',
-        projetos: ''
-      })
-      setTerms({
-        termosUso: false,
-        politicaPrivacidade: false,
-        comunidade: false
-      })
+      
+      // Ativa o efeito de confete apenas uma vez
+      if (!hasShownConfetti) {
+        setShowConfetti(true)
+        setHasShownConfetti(true)
+      }
+      
+      // Mostra o alerta após um pequeno delay para o confete aparecer
+      setTimeout(() => {
+        alert('Formulário enviado com sucesso! Em breve entraremos em contato.')
+        // Reset form
+        setFormData({
+          nomeCompleto: '',
+          profissao: '',
+          empresa: '',
+          cpf: '',
+          telefone: '',
+          email: '',
+          endereco: '',
+          projetos: ''
+        })
+        setTerms({
+          termoAdesao: false
+        })
+        // Reset do estado do confete após resetar o formulário
+        setShowConfetti(false)
+        setHasShownConfetti(false)
+      }, 500)
     }, 1500)
   }
 
   return (
-    <section className="relative py-20 px-4">
+    <>
+      <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+      <section className="relative py-20 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Título da Seção */}
         <div className="text-center mb-12">
@@ -385,67 +423,40 @@ export default function RegistrationFormSection() {
           {/* Seção de Upload de Identidade */}
           <IdentityUploadSection />
 
-          {/* Checkboxes de Termos */}
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50 space-y-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Termos e Condições</h3>
-            
-            {/* Termo 1 */}
+          {/* Checkbox de Termos */}
+          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
             <div className="flex items-start gap-3">
               <div className="relative flex items-center">
                 <input
                   type="checkbox"
-                  id="termosUso"
-                  checked={terms.termosUso}
-                  onChange={() => handleCheckboxChange('termosUso')}
+                  id="termoAdesao"
+                  checked={terms.termoAdesao}
+                  onChange={handleCheckboxChange}
                   className="w-5 h-5 rounded border-gray-600 bg-gray-800/50 text-[#25D366] focus:ring-2 focus:ring-[#25D366] cursor-pointer"
                 />
               </div>
-              <label htmlFor="termosUso" className="flex-1 text-sm text-gray-300 cursor-pointer font-normal">
-                Aceito os <span className="text-[#25D366] hover:underline font-medium">Termos de Uso</span> da plataforma
+              <label htmlFor="termoAdesao" className="flex-1 text-sm text-gray-300 cursor-pointer font-normal">
+                <button
+                  type="button"
+                  onClick={handleOpenModal}
+                  className="text-[#25D366] hover:underline font-medium text-left"
+                >
+                  Ler e analisar Termo de Adesão, Reciprocidade e Compromisso de Repasse
+                </button>
               </label>
             </div>
-            {errors.termosUso && (
-              <p className="ml-8 text-sm text-red-400">{errors.termosUso}</p>
-            )}
-
-            {/* Termo 2 */}
-            <div className="flex items-start gap-3">
-              <div className="relative flex items-center">
-                <input
-                  type="checkbox"
-                  id="politicaPrivacidade"
-                  checked={terms.politicaPrivacidade}
-                  onChange={() => handleCheckboxChange('politicaPrivacidade')}
-                  className="w-5 h-5 rounded border-gray-600 bg-gray-800/50 text-[#25D366] focus:ring-2 focus:ring-[#25D366] cursor-pointer"
-                />
-              </div>
-              <label htmlFor="politicaPrivacidade" className="flex-1 text-sm text-gray-300 cursor-pointer font-normal">
-                Aceito a <span className="text-[#25D366] hover:underline font-medium">Política de Privacidade</span> e autorizo o tratamento dos meus dados pessoais
-              </label>
-            </div>
-            {errors.politicaPrivacidade && (
-              <p className="ml-8 text-sm text-red-400">{errors.politicaPrivacidade}</p>
-            )}
-
-            {/* Termo 3 */}
-            <div className="flex items-start gap-3">
-              <div className="relative flex items-center">
-                <input
-                  type="checkbox"
-                  id="comunidade"
-                  checked={terms.comunidade}
-                  onChange={() => handleCheckboxChange('comunidade')}
-                  className="w-5 h-5 rounded border-gray-600 bg-gray-800/50 text-[#25D366] focus:ring-2 focus:ring-[#25D366] cursor-pointer"
-                />
-              </div>
-              <label htmlFor="comunidade" className="flex-1 text-sm text-gray-300 cursor-pointer font-normal">
-                Aceito os <span className="text-[#25D366] hover:underline font-medium">Termos e Condições da Comunidade InnovaNation</span> e concordo em participar ativamente
-              </label>
-            </div>
-            {errors.comunidade && (
-              <p className="ml-8 text-sm text-red-400">{errors.comunidade}</p>
+            {errors.termoAdesao && (
+              <p className="ml-8 mt-2 text-sm text-red-400">{errors.termoAdesao}</p>
             )}
           </div>
+
+          {/* Modal de Termos */}
+          <TermsModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onAccept={handleAcceptTerms}
+            isAccepted={terms.termoAdesao}
+          />
 
           {/* Botão de Submit */}
           <div className="flex justify-center pt-4">
@@ -484,6 +495,7 @@ export default function RegistrationFormSection() {
         </form>
       </div>
     </section>
+    </>
   )
 }
 
