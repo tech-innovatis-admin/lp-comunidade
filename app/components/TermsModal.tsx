@@ -58,8 +58,7 @@ export default function TermsModal({ isOpen, onClose, onAccept, isAccepted }: Te
               </p>
 
               <p className="text-justify">
-                Ao ingressar no grupo de comunicação e/ou aceitar participar de qualquer iniciativa de prospecção ou projeto intermediado pela 
-                INNOVATIS, o PARCEIRO adere e concorda com as seguintes cláusulas:
+                Ao ingressar no grupo de comunicação e/ou aceitar participar de qualquer iniciativa de prospecção ou projeto intermediado pela <strong>INNOVATIS</strong>, o <strong>PARCEIRO</strong> adere e concorda com as seguintes cláusulas:
               </p>
 
               <div className="space-y-3">
@@ -82,9 +81,8 @@ export default function TermsModal({ isOpen, onClose, onAccept, isAccepted }: Te
                     <div>
                       <h4 className="text-sm font-semibold mb-1">2.1. Percentual de Repasse:</h4>
                       <p className="text-justify">
-                        O <strong>PARCEIRO</strong> se compromete a repassar à <strong>INNOVATIS GESTÃO & CONSULTORIA LTDA</strong> <strong>10% (dez por cento)</strong> do Valor 
-                        Global Líquido de cada projeto efetivamente contratado e executado cuja origem ou intermediação tenha sido comprovadamente da 
-                        <strong>INNOVATIS</strong>.
+                        O <strong>PARCEIRO</strong> se compromete a repassar à <strong>INNOVATIS GESTÃO & CONSULTORIA LTDA</strong> <strong>10% (dez por cento)</strong> do <strong>Valor 
+                        Global Líquido</strong> de cada projeto efetivamente contratado e executado cuja origem ou intermediação tenha sido comprovadamente da <strong>INNOVATIS</strong>.
                       </p>
                     </div>
 
@@ -123,8 +121,8 @@ export default function TermsModal({ isOpen, onClose, onAccept, isAccepted }: Te
                   </p>
                   <p className="text-justify">
                     Caso o <strong>PARCEIRO</strong> viole, total ou parcialmente, o dever de confidencialidade e sigilo estabelecido, divulgando ou utilizando 
-                    indevidamente as informações confidenciais a que teve acesso, incorrerá em multa não compensatória no valor de <strong>R$ 1.000.000,00 
-                    (um milhão)</strong>.
+                    indevidamente as informações confidenciais a que teve acesso, incorrerá em multa não compensatória no valor de R$ 1.000.000,00 
+                    (um milhão).
                   </p>
                 </div>
 
