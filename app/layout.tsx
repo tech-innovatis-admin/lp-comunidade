@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "./globals.css";
 import ParticlesBackground from "./components/ParticlesBackground";
 import MiniFooter from "./components/MiniFooter";
@@ -32,11 +31,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="antialiased relative flex flex-col min-h-screen bg-[#121826] text-white">
-        <Script
-          src="https://www.google.com/recaptcha/api.js"
-          strategy="afterInteractive"
-          defer
-        />
         <ParticlesBackground />
         <div className="flex-grow flex flex-col">
           {children}
