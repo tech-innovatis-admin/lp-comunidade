@@ -444,7 +444,7 @@ export default function RegistrationFormSection() {
               >
                 <FileText className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
                 <span className="text-white font-semibold text-sm sm:text-base">
-                  Ler e Analisar Termo de Adesão, Reciprocidade e Compromisso de Repasse
+                  Ler Termo de Adesão, Reciprocidade e Compromisso de Repasse
                 </span>
                 <ChevronRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
               </button>
