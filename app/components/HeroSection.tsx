@@ -4,20 +4,20 @@ import Image from 'next/image'
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-20 pt-32">
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 py-16 pt-2">
       {/* Conteúdo Principal */}
       <div className="max-w-4xl mx-auto text-center z-10 space-y-8">
         {/* Logo */}
-        <div 
-          className="mb-8 opacity-0 animate-fadeIn"
+        <div
+          className="-mb-20 opacity-0 animate-fadeIn"
           style={{ animationDelay: '0.2s' }}
         >
           <Image 
-            src="/logo_innovatis.png" 
+            src="/logo_InnovaNation/logo_innovanation4.png" 
             alt="Innovatis Logo"
             width={200}
             height={60}
-            className="h-16 w-auto mx-auto"
+            className="h-100 w-auto mx-auto"
             priority
           />
         </div>
@@ -27,10 +27,10 @@ export default function HeroSection() {
           className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight opacity-0 animate-fadeIn"
           style={{ animationDelay: '0.4s' }}
         >
-          <span className="block mb-2 bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent font-extrabold">
+          <span className="block mb-2 text-[#25D366] font-extrabold">
             Captação e Gestão de Projetos
           </span>
-          <span className="block text-[#25D366] mt-2 text-2xl sm:text-3xl md:text-4xl font-semibold">
+          <span className="block bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent mt-2 text-2xl sm:text-3xl md:text-4xl font-semibold">
             Conectando Academia, Governo e Mercado
           </span>
         </h1>
@@ -45,7 +45,7 @@ export default function HeroSection() {
 
         {/* Indicador de Scroll */}
         <div 
-          className="pt-12 opacity-0 animate-fadeIn"
+          className="pt-2 opacity-0 animate-fadeIn"
           style={{ animationDelay: '1s' }}
         >
           <div className="animate-bounce">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2 } from 'lucide-react'
+import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight } from 'lucide-react'
 import IdentityUploadSection from './IdentityUploadSection'
 import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
@@ -23,6 +23,7 @@ export default function RegistrationFormSection() {
   })
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [hasOpenedModal, setHasOpenedModal] = useState(false) // Novo estado para rastrear se o modal foi aberto
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
@@ -60,6 +61,7 @@ export default function RegistrationFormSection() {
 
   const handleOpenModal = () => {
     setIsModalOpen(true)
+    setHasOpenedModal(true) // Marca que o modal foi aberto
   }
 
   const handleCloseModal = () => {
@@ -78,6 +80,14 @@ export default function RegistrationFormSection() {
         delete newErrors.termoAdesao
         return newErrors
       })
+    }
+  }
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    // Se o modal ainda não foi aberto, abre o modal ao invés de marcar o checkbox
+    if (!hasOpenedModal) {
+      e.preventDefault()
+      handleOpenModal()
     }
   }
 
@@ -203,7 +213,7 @@ export default function RegistrationFormSection() {
   return (
     <>
       <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
-      <section className="relative py-20 px-4">
+      <section className="relative py-16 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Título da Seção */}
         <div className="text-center mb-12">
@@ -423,8 +433,24 @@ export default function RegistrationFormSection() {
           {/* Seção de Upload de Identidade */}
           <IdentityUploadSection />
 
-          {/* Checkbox de Termos */}
+          {/* Botão e Checkbox de Termos */}
           <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
+            {/* Botão para abrir os termos */}
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={handleOpenModal}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600 rounded-lg transition-all duration-300 group hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <FileText className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
+                <span className="text-white font-semibold text-sm sm:text-base">
+                  Ler e Analisar Termo de Adesão, Reciprocidade e Compromisso de Repasse
+                </span>
+                <ChevronRight className="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+
+            {/* Checkbox de aceitação */}
             <div className="flex items-start gap-3">
               <div className="relative flex items-center">
                 <input
@@ -432,21 +458,34 @@ export default function RegistrationFormSection() {
                   id="termoAdesao"
                   checked={terms.termoAdesao}
                   onChange={handleCheckboxChange}
-                  className="w-5 h-5 rounded border-gray-600 bg-gray-800/50 text-[#25D366] focus:ring-2 focus:ring-[#25D366] cursor-pointer"
+                  onClick={handleCheckboxClick}
+                  disabled={!hasOpenedModal}
+                  className={`w-5 h-5 rounded border-gray-600 bg-gray-800/50 text-[#25D366] focus:ring-2 focus:ring-[#25D366] ${
+                    hasOpenedModal 
+                      ? 'cursor-pointer' 
+                      : 'cursor-not-allowed opacity-50'
+                  }`}
                 />
               </div>
-              <label htmlFor="termoAdesao" className="flex-1 text-sm text-gray-300 cursor-pointer font-normal">
-                <button
-                  type="button"
-                  onClick={handleOpenModal}
-                  className="text-[#25D366] hover:underline font-medium text-left"
-                >
-                  Ler e analisar Termo de Adesão, Reciprocidade e Compromisso de Repasse
-                </button>
+              <label 
+                htmlFor="termoAdesao" 
+                className={`flex-1 text-sm text-gray-300 font-normal ${
+                  hasOpenedModal ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                }`}
+              >
+                {hasOpenedModal 
+                  ? 'Aceito o Termo de Adesão, Reciprocidade e Compromisso de Repasse'
+                  : 'Você precisa ler os termos antes de aceitar'
+                }
               </label>
             </div>
             {errors.termoAdesao && (
               <p className="ml-8 mt-2 text-sm text-red-400">{errors.termoAdesao}</p>
+            )}
+            {!hasOpenedModal && (
+              <p className="mt-2 text-xs text-gray-400 italic">
+                Clique no botão acima para ler os termos completos
+              </p>
             )}
           </div>
 
