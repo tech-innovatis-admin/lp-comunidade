@@ -34,7 +34,7 @@ export default function TestimonialsSection() {
         {/* Título da Seção */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            O Que Nossos <span className="text-[#25D366] font-bold">Clientes</span> Dizem
+            O Que Nossos <span className="text-[#5EBFED] font-bold">Clientes</span> Dizem
           </h2>
           <p className="text-gray-300 text-lg font-normal">
             Depoimentos reais de quem já transformou seu projeto conosco
@@ -57,7 +57,7 @@ export default function TestimonialsSection() {
               <div className="flex items-start justify-between mb-4">
                 {/* Foto de Perfil */}
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[#25D366]/30 ring-offset-2 ring-offset-gray-800/50">
+                  <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[#5EBFED]/30 ring-offset-2 ring-offset-gray-800/50">
                     <Image
                       src={testimonial.avatar}
                       alt={testimonial.name}
@@ -67,7 +67,7 @@ export default function TestimonialsSection() {
                     />
                   </div>
                   {/* Badge de verificação */}
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#25D366] rounded-full flex items-center justify-center border-2 border-gray-800">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#5EBFED] rounded-full flex items-center justify-center border-2 border-gray-800">
                     <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -75,7 +75,7 @@ export default function TestimonialsSection() {
                 </div>
 
                 {/* Ícone de Aspas */}
-                <Quote className="w-8 h-8 text-[#25D366] opacity-30 flex-shrink-0" />
+                <Quote className="w-8 h-8 text-[#5EBFED] opacity-30 flex-shrink-0" />
               </div>
 
               {/* Avaliação */}
