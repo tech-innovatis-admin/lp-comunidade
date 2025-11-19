@@ -27,7 +27,7 @@ export default function HeroSection() {
           className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight opacity-0 animate-fadeIn"
           style={{ animationDelay: '0.4s' }}
         >
-          <span className="block mb-2 text-[#25D366] font-extrabold">
+          <span className="block mb-2 text-[#22AE84] font-extrabold">
             Captação e Gestão de Projetos
           </span>
           <span className="block bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent mt-2 text-2xl sm:text-3xl md:text-4xl font-semibold">

@@ -10,7 +10,11 @@ interface FileWithPreview {
   preview: string
 }
 
-export default function IdentityUploadSection() {
+interface IdentityUploadSectionProps {
+  onFilesChange?: (hasFiles: boolean) => void
+}
+
+export default function IdentityUploadSection({ onFilesChange }: IdentityUploadSectionProps) {
   const [uploadType, setUploadType] = useState<UploadType>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [photoFiles, setPhotoFiles] = useState<FileWithPreview[]>([])
@@ -25,6 +29,8 @@ export default function IdentityUploadSection() {
     setPdfFile(null)
     setPhotoFiles([])
     setErrors({})
+    // Notifica o componente pai que não há mais arquivo
+    onFilesChange?.(false)
   }
 
   const validatePDF = (file: File): boolean => {
@@ -62,6 +68,8 @@ export default function IdentityUploadSection() {
           delete newErrors.pdf
           return newErrors
         })
+        // Notifica o componente pai que há arquivo
+        onFilesChange?.(true)
       }
     }
   }
@@ -90,6 +98,8 @@ export default function IdentityUploadSection() {
         delete newErrors.photo
         return newErrors
       })
+      // Notifica o componente pai que há arquivo
+      onFilesChange?.(true)
     }
   }
 
@@ -98,12 +108,19 @@ export default function IdentityUploadSection() {
     if (pdfInputRef.current) {
       pdfInputRef.current.value = ''
     }
+    // Notifica o componente pai que não há mais arquivo
+    onFilesChange?.(false)
   }
 
   const removePhoto = (index: number) => {
     const fileToRemove = photoFiles[index]
     URL.revokeObjectURL(fileToRemove.preview)
-    setPhotoFiles(prev => prev.filter((_, i) => i !== index))
+    setPhotoFiles(prev => {
+      const newPhotos = prev.filter((_, i) => i !== index)
+      // Notifica o componente pai sobre o estado atual
+      onFilesChange?.(newPhotos.length > 0)
+      return newPhotos
+    })
   }
 
   const formatFileSize = (bytes: number): string => {

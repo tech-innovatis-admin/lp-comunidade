@@ -8,17 +8,17 @@ export default function InnovaNationSection() {
       icon: FileText,
       title: 'Editais de Fomento',
       description: 'Acesso exclusivo a editais de financiamento',
-      color: '#2563EB', // Azul - confiança e institucionalidade
+      color: '#5EBFED', // Azul - confiança e institucionalidade
       gradient: 'from-blue-500 to-blue-600',
-      titleColor: '#60A5FA' // Azul mais claro para o título
+      titleColor: '#5EBFED' // Azul mais claro para o título
     },
     {
       icon: HandCoins,
       title: 'Captação de Recursos',
       description: 'Oportunidades personalizadas para captação de recursos e investimentos',
-      color: '#22C55E', // Verde - dinheiro e crescimento
+      color: '#22AE84', // Verde - dinheiro e crescimento
       gradient: 'from-green-500 to-green-600',
-      titleColor: '#4ADE80' // Verde mais claro para o título
+      titleColor: '#22AE84' // Verde mais claro para o título
     },
     {
       icon: Handshake,
@@ -32,9 +32,9 @@ export default function InnovaNationSection() {
       icon: Users,
       title: 'Networking',
       description: 'Rede de contatos qualificados em diversos setores e áreas de atuação',
-      color: '#FACC15', // Amarelo - energia e conexões
+      color: '#EA5B0C', // Amarelo - energia e conexões
       gradient: 'from-yellow-400 to-yellow-500',
-      titleColor: '#FDE047' // Amarelo mais claro para o título
+      titleColor: '#EA5B0C' // Amarelo mais claro para o título
     }
   ]
 
@@ -44,7 +44,7 @@ export default function InnovaNationSection() {
         {/* Título da Seção */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            Nossa comunidade a <span className="text-[#25D366] font-bold">InnovaNation</span>
+            Nossa comunidade a <span className="text-[#22AE84] font-bold">InnovaNation</span>
           </h2>
           <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed font-normal">
             Uma comunidade exclusiva onde membros têm acesso a oportunidades únicas de crescimento e desenvolvimento

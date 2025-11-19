@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight, X, AlertCircle } from 'lucide-react'
 import IdentityUploadSection from './IdentityUploadSection'
 import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
@@ -24,6 +24,9 @@ export default function RegistrationFormSection() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [hasOpenedModal, setHasOpenedModal] = useState(false) // Novo estado para rastrear se o modal foi aberto
+  const [hasIdentityDocument, setHasIdentityDocument] = useState(false) // Estado para rastrear se documento foi enviado
+  const [showMissingFieldsModal, setShowMissingFieldsModal] = useState(false) // Estado para controlar modal de campos pendentes
+  const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]) // Lista de campos pendentes
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
@@ -155,15 +158,16 @@ export default function RegistrationFormSection() {
 
   // Função para verificar se o formulário está válido (sem mostrar erros)
   const isFormValid = () => {
-    const nomeValido = formData.nomeCompleto.trim() !== ''
+    const nomeValido = formData.nomeCompleto.trim() !== '' && formData.nomeCompleto.length <= 120
     const profissaoValida = formData.profissao.trim() !== ''
+    const empresaValida = formData.empresa.trim() !== '' && formData.empresa.length <= 150
     const cpfValido = isValidCPF(formData.cpf) // Validação completa com cálculo dos dígitos verificadores
     const telefoneValido = formData.telefone.replace(/\D/g, '').length >= 10
     const emailValido = formData.email.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
-    const enderecoValido = formData.endereco.trim() !== ''
+    const enderecoValido = formData.endereco.trim() !== '' && formData.endereco.length <= 200
     const termosValidos = terms.termoAdesao
 
-    return nomeValido && profissaoValida && cpfValido && telefoneValido && emailValido && enderecoValido && termosValidos
+    return nomeValido && profissaoValida && empresaValida && cpfValido && telefoneValido && emailValido && enderecoValido && termosValidos && hasIdentityDocument
   }
 
   const validateForm = () => {
@@ -171,10 +175,18 @@ export default function RegistrationFormSection() {
 
     if (!formData.nomeCompleto.trim()) {
       newErrors.nomeCompleto = 'Nome completo é obrigatório'
+    } else if (formData.nomeCompleto.length > 120) {
+      newErrors.nomeCompleto = 'Nome completo deve ter no máximo 120 caracteres'
     }
 
     if (!formData.profissao.trim()) {
       newErrors.profissao = 'Profissão é obrigatória'
+    }
+
+    if (!formData.empresa.trim()) {
+      newErrors.empresa = 'Empresa ou Instituição que Trabalha é obrigatória'
+    } else if (formData.empresa.length > 150) {
+      newErrors.empresa = 'Empresa ou Instituição deve ter no máximo 150 caracteres'
     }
 
     if (!formData.cpf.trim()) {
@@ -199,6 +211,8 @@ export default function RegistrationFormSection() {
 
     if (!formData.endereco.trim()) {
       newErrors.endereco = 'Endereço é obrigatório'
+    } else if (formData.endereco.length > 200) {
+      newErrors.endereco = 'Endereço deve ter no máximo 200 caracteres'
     }
 
     if (!terms.termoAdesao) {
@@ -208,6 +222,112 @@ export default function RegistrationFormSection() {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+
+  // Função para listar todos os campos pendentes
+  const getMissingFields = (): string[] => {
+    const missing: string[] = []
+
+    // Campos obrigatórios
+    if (!formData.nomeCompleto.trim()) {
+      missing.push('Nome completo')
+    } else if (formData.nomeCompleto.length > 120) {
+      missing.push('Nome completo (máximo 120 caracteres)')
+    }
+
+    if (!formData.profissao.trim()) {
+      missing.push('Profissão')
+    }
+
+    // Empresa ou Instituição
+    if (!formData.empresa.trim()) {
+      missing.push('Empresa ou Instituição que Trabalha')
+    } else if (formData.empresa.length > 150) {
+      missing.push('Empresa ou Instituição (máximo 150 caracteres)')
+    }
+
+    // CPF
+    if (!formData.cpf.trim()) {
+      missing.push('CPF')
+    } else if (formData.cpf.replace(/\D/g, '').length !== 11) {
+      missing.push('CPF (deve conter 11 dígitos)')
+    } else if (!isValidCPF(formData.cpf)) {
+      missing.push('CPF válido')
+    }
+
+    // Telefone
+    if (!formData.telefone.trim()) {
+      missing.push('Número de telefone')
+    } else if (formData.telefone.replace(/\D/g, '').length < 10) {
+      missing.push('Telefone válido')
+    }
+
+    // Email
+    if (!formData.email.trim()) {
+      missing.push('E-mail')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      missing.push('E-mail válido')
+    }
+
+    // Endereço
+    if (!formData.endereco.trim()) {
+      missing.push('Endereço')
+    } else if (formData.endereco.length > 200) {
+      missing.push('Endereço (máximo 200 caracteres)')
+    }
+
+    // Documento de identidade
+    if (!hasIdentityDocument) {
+      missing.push('Envio do documento de identidade')
+    }
+
+    // Termos
+    if (!terms.termoAdesao) {
+      missing.push('Aceitar Termo de Adesão, Reciprocidade e Compromisso de Repasse')
+    }
+
+    return missing
+  }
+
+  // Função chamada ao tentar clicar no botão
+  const handleAttemptSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Se estiver enviando, não fazer nada
+    if (isSubmitting) {
+      return
+    }
+
+    // Verifica se o formulário está válido
+    if (isFormValid() && hasIdentityDocument) {
+      // Se estiver tudo ok, prossegue com o submit
+      handleSubmit(e)
+      return
+    }
+
+    // Se houver pendências, mostra modal detalhado
+    const missing = getMissingFields()
+
+    if (missing.length > 0) {
+      setMissingFieldsList(missing)
+      setShowMissingFieldsModal(true)
+    }
+  }
+
+  // Função para fechar o modal de campos pendentes
+  const handleCloseMissingFieldsModal = () => {
+    setShowMissingFieldsModal(false)
+  }
+
+  // Efeito para fechar o modal automaticamente após 6 segundos
+  useEffect(() => {
+    if (showMissingFieldsModal) {
+      const timer = setTimeout(() => {
+        setShowMissingFieldsModal(false)
+      }, 6000) // 6 segundos
+
+      return () => clearTimeout(timer)
+    }
+  }, [showMissingFieldsModal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -246,6 +366,8 @@ export default function RegistrationFormSection() {
         setTerms({
           termoAdesao: false
         })
+        setHasOpenedModal(false)
+        setHasIdentityDocument(false)
         // Reset do estado do confete após resetar o formulário
         setShowConfetti(false)
         setHasShownConfetti(false)
@@ -261,11 +383,11 @@ export default function RegistrationFormSection() {
         {/* Título da Seção */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            Faça a sua <span className="text-[#25D366] font-bold">Inscrição</span> agora!
+            Faça a sua <span className="text-[#22AE84] font-bold">Inscrição</span> agora!
           </h2>
           <p className="text-lg text-gray-300 max-w-2xl mx-auto font-normal">
             Preencha o formulário abaixo e torne-se membro da comunidade{' '}
-            <span className="text-[#25D366] font-medium">InnovaNation</span>
+            <span className="text-[#22AE84] font-medium">InnovaNation</span>
           </p>
         </div>
 
@@ -284,6 +406,7 @@ export default function RegistrationFormSection() {
                 name="nomeCompleto"
                 value={formData.nomeCompleto}
                 onChange={handleInputChange}
+                maxLength={120}
                 className={`w-full px-4 py-3 bg-gray-800/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-normal ${
                   errors.nomeCompleto 
                     ? 'border-red-500 focus:ring-red-500' 
@@ -332,9 +455,17 @@ export default function RegistrationFormSection() {
                 name="empresa"
                 value={formData.empresa}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] transition-all font-normal"
+                maxLength={150}
+                className={`w-full px-4 py-3 bg-gray-800/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-normal ${
+                  errors.empresa 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-gray-600 focus:ring-[#25D366] focus:border-[#25D366]'
+                }`}
                 placeholder="Digite o nome da empresa ou instituição"
               />
+              {errors.empresa && (
+                <p className="mt-1 text-sm text-red-400">{errors.empresa}</p>
+              )}
             </div>
 
             {/* Campo CPF */}
@@ -459,6 +590,7 @@ export default function RegistrationFormSection() {
                 value={formData.endereco}
                 onChange={handleInputChange}
                 rows={3}
+                maxLength={200}
                 className={`w-full px-4 py-3 bg-gray-800/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all resize-none font-normal ${
                   errors.endereco 
                     ? 'border-red-500 focus:ring-red-500' 
@@ -490,7 +622,7 @@ export default function RegistrationFormSection() {
           </div>
 
           {/* Seção de Upload de Identidade */}
-          <IdentityUploadSection />
+          <IdentityUploadSection onFilesChange={setHasIdentityDocument} />
 
           {/* Botão e Checkbox de Termos */}
           <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
@@ -556,23 +688,88 @@ export default function RegistrationFormSection() {
             isAccepted={terms.termoAdesao}
           />
 
+          {/* Modal de Campos Pendentes */}
+          {showMissingFieldsModal && (
+            <div 
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+              onClick={handleCloseMissingFieldsModal}
+            >
+              <div 
+                className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl max-w-md w-full border border-gray-700 shadow-2xl transform transition-all animate-fadeIn"
+                onClick={(e) => e.stopPropagation()}
+                style={{ animationDelay: '0.1s' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-500/20 rounded-lg animate-pulse">
+                      <AlertCircle className="w-6 h-6 text-yellow-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white">
+                      Campos Pendentes
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleCloseMissingFieldsModal}
+                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    aria-label="Fechar modal"
+                  >
+                    <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                  <p className="text-gray-300 mb-4 font-normal leading-relaxed">
+                    Antes de finalizar sua inscrição, é necessário completar os seguintes campos:
+                  </p>
+                  
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                    <ul className="space-y-3">
+                      {missingFieldsList.map((field, index) => (
+                        <li 
+                          key={index} 
+                          className="flex items-start gap-3 animate-fadeIn"
+                          style={{ animationDelay: `${index * 0.05}s` }}
+                        >
+                          <div className="mt-1.5 flex-shrink-0">
+                            <div className="w-2 h-2 bg-[#25D366] rounded-full"></div>
+                          </div>
+                          <span className="text-gray-200 font-normal leading-relaxed">{field}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end p-6 border-t border-gray-700">
+                  <button
+                    onClick={handleCloseMissingFieldsModal}
+                    className="px-8 py-3 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-lg transition-all duration-300 font-semibold transform hover:scale-105 active:scale-95 shadow-lg shadow-[#25D366]/30"
+                  >
+                    Entendi, vou completar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Botão de Submit */}
           <div className="flex justify-center pt-4">
             <button
-              type="submit"
-              disabled={isSubmitting || !isFormValid()}
+              type="button"
+              onClick={handleAttemptSubmit}
               className={`
                 w-full sm:w-auto
                 px-8 py-4 rounded-full
                 font-semibold text-lg
                 transition-all duration-300
-                transform hover:scale-105 active:scale-95
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100
                 ${isSubmitting 
-                  ? 'bg-gray-600 text-gray-300' 
-                  : isFormValid()
-                    ? 'bg-[#25D366] hover:bg-[#20BA5A] text-white shadow-xl shadow-[#25D366]/30'
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  ? 'bg-gray-600 text-gray-300 cursor-wait transform-none hover:scale-100' 
+                  : isFormValid() && hasIdentityDocument
+                    ? 'bg-[#25D366] hover:bg-[#20BA5A] text-white shadow-xl shadow-[#25D366]/30 transform hover:scale-105 active:scale-95 cursor-pointer'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed transform-none hover:scale-100'
                 }
                 flex items-center justify-center gap-2
               `}
