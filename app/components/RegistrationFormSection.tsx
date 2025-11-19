@@ -318,17 +318,6 @@ export default function RegistrationFormSection() {
     setShowMissingFieldsModal(false)
   }
 
-  // Efeito para fechar o modal automaticamente após 6 segundos
-  useEffect(() => {
-    if (showMissingFieldsModal) {
-      const timer = setTimeout(() => {
-        setShowMissingFieldsModal(false)
-      }, 6000) // 6 segundos
-
-      return () => clearTimeout(timer)
-    }
-  }, [showMissingFieldsModal])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -378,7 +367,7 @@ export default function RegistrationFormSection() {
   return (
     <>
       <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
-      <section className="relative py-16 px-4">
+      <section className="relative py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Título da Seção */}
         <div className="text-center mb-12">
@@ -700,42 +689,42 @@ export default function RegistrationFormSection() {
                 style={{ animationDelay: '0.1s' }}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-700">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-500/20 rounded-lg animate-pulse">
-                      <AlertCircle className="w-6 h-6 text-yellow-400" />
+                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-yellow-500/20 rounded-lg animate-pulse">
+                      <AlertCircle className="w-5 h-5 text-yellow-400" />
                     </div>
-                    <h2 className="text-xl font-bold text-white">
+                    <h2 className="text-lg font-bold text-white">
                       Campos Pendentes
                     </h2>
                   </div>
                   <button
                     onClick={handleCloseMissingFieldsModal}
-                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
                     aria-label="Fechar modal"
                   >
-                    <X className="w-5 h-5 text-gray-400 hover:text-white" />
+                    <X className="w-4 h-4 text-gray-400 hover:text-white" />
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 max-h-[60vh] overflow-y-auto">
-                  <p className="text-gray-300 mb-4 font-normal leading-relaxed">
+                <div className="p-4 max-h-[50vh] overflow-y-auto">
+                  <p className="text-gray-300 mb-3 text-sm font-normal leading-relaxed">
                     Antes de finalizar sua inscrição, é necessário completar os seguintes campos:
                   </p>
                   
-                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
-                    <ul className="space-y-3">
+                  <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700/50">
+                    <ul className="space-y-2">
                       {missingFieldsList.map((field, index) => (
                         <li 
                           key={index} 
-                          className="flex items-start gap-3 animate-fadeIn"
+                          className="flex items-start gap-2 animate-fadeIn"
                           style={{ animationDelay: `${index * 0.05}s` }}
                         >
-                          <div className="mt-1.5 flex-shrink-0">
-                            <div className="w-2 h-2 bg-[#25D366] rounded-full"></div>
+                          <div className="mt-1 flex-shrink-0">
+                            <div className="w-1.5 h-1.5 bg-[#25D366] rounded-full"></div>
                           </div>
-                          <span className="text-gray-200 font-normal leading-relaxed">{field}</span>
+                          <span className="text-gray-200 text-sm font-normal leading-relaxed">{field}</span>
                         </li>
                       ))}
                     </ul>
@@ -743,10 +732,10 @@ export default function RegistrationFormSection() {
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-end p-6 border-t border-gray-700">
+                <div className="flex justify-end p-4 border-t border-gray-700">
                   <button
                     onClick={handleCloseMissingFieldsModal}
-                    className="px-8 py-3 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-lg transition-all duration-300 font-semibold transform hover:scale-105 active:scale-95 shadow-lg shadow-[#25D366]/30"
+                    className="px-6 py-2 bg-[#25D366] hover:bg-[#20BA5A] text-white rounded-lg transition-all duration-300 font-semibold text-sm transform hover:scale-105 active:scale-95 shadow-lg shadow-[#25D366]/30"
                   >
                     Entendi, vou completar
                   </button>
