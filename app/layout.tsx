@@ -34,7 +34,8 @@ export default function RootLayout({
       <body className="antialiased relative flex flex-col min-h-screen bg-[#121826] text-white">
         <Script
           src="https://www.google.com/recaptcha/api.js"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
+          defer
         />
         <ParticlesBackground />
         <div className="flex-grow flex flex-col">
