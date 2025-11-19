@@ -216,42 +216,19 @@ export default function RegistrationFormSection() {
       return
     }
 
-    // Validação do reCAPTCHA
-    const captchaToken = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
-
-    if (!captchaToken) {
-      alert('Por favor, confirme o reCAPTCHA.')
-      return
-    }
-
     setIsSubmitting(true)
 
-    try {
-      // Envia os dados para a API
-      const response = await fetch('/api/innovanation/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          terms,
-          captchaToken,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao enviar formulário')
-      }
-
+    // Aqui você pode integrar com sua API ou enviar para WhatsApp
+    // Por enquanto, apenas simula o envio
+    setTimeout(() => {
+      setIsSubmitting(false)
+      
       // Ativa o efeito de confete apenas uma vez
       if (!hasShownConfetti) {
         setShowConfetti(true)
         setHasShownConfetti(true)
       }
-
+      
       // Mostra o alerta após um pequeno delay para o confete aparecer
       setTimeout(() => {
         alert('Formulário enviado com sucesso! Em breve entraremos em contato.')
@@ -269,21 +246,11 @@ export default function RegistrationFormSection() {
         setTerms({
           termoAdesao: false
         })
-        setHasOpenedModal(false)
         // Reset do estado do confete após resetar o formulário
         setShowConfetti(false)
         setHasShownConfetti(false)
-        // Reset do reCAPTCHA
-        if (typeof window !== 'undefined' && (window as any).grecaptcha) {
-          ;(window as any).grecaptcha.reset()
-        }
       }, 500)
-    } catch (error) {
-      console.error('Erro ao enviar formulário:', error)
-      alert(error instanceof Error ? error.message : 'Erro ao enviar formulário. Tente novamente.')
-    } finally {
-      setIsSubmitting(false)
-    }
+    }, 1500)
   }
 
   return (
@@ -588,16 +555,6 @@ export default function RegistrationFormSection() {
             onAccept={handleAcceptTerms}
             isAccepted={terms.termoAdesao}
           />
-
-          {/* reCAPTCHA */}
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
-            <div className="flex justify-center">
-              <div
-                className="g-recaptcha"
-                data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-              />
-            </div>
-          </div>
 
           {/* Botão de Submit */}
           <div className="flex justify-center pt-4">
