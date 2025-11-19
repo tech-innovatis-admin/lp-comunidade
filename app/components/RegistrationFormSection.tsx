@@ -91,6 +91,47 @@ export default function RegistrationFormSection() {
     }
   }
 
+  // Função de validação de CPF com cálculo dos dígitos verificadores
+  const isValidCPF = (raw: string): boolean => {
+    // 1) Remove tudo que não for número
+    const cpf = raw.replace(/\D/g, '')
+
+    // 2) Checa tamanho (tem que ter 11 dígitos)
+    if (cpf.length !== 11) return false
+
+    // 3) Rejeita CPFs com todos os dígitos iguais (ex.: 11111111111)
+    if (/^(\d)\1{10}$/.test(cpf)) return false
+
+    // Função auxiliar para calcular cada dígito verificador
+    const calcDigit = (base: string, factorStart: number): number => {
+      let sum = 0
+
+      // Multiplica cada dígito pelo peso decrescente
+      for (let i = 0; i < base.length; i++) {
+        const digit = parseInt(base[i], 10)
+        const factor = factorStart - i // ex.: 10,9,8... ou 11,10,9...
+        sum += digit * factor
+      }
+
+      const rest = sum % 11
+      // Regra do CPF
+      return rest < 2 ? 0 : 11 - rest
+    }
+
+    // 4) Pega os 9 primeiros dígitos
+    const base = cpf.slice(0, 9)
+
+    // 5) Calcula o primeiro dígito
+    const d1 = calcDigit(base, 10)
+
+    // 6) Calcula o segundo dígito (usando base + d1)
+    const d2 = calcDigit(base + d1.toString(), 11)
+
+    // 7) Monta o CPF calculado e compara com o informado
+    const cpfCalculated = base + d1.toString() + d2.toString()
+    return cpf === cpfCalculated
+  }
+
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '')
     if (numbers.length <= 11) {
@@ -116,7 +157,7 @@ export default function RegistrationFormSection() {
   const isFormValid = () => {
     const nomeValido = formData.nomeCompleto.trim() !== ''
     const profissaoValida = formData.profissao.trim() !== ''
-    const cpfValido = formData.cpf.replace(/\D/g, '').length === 11
+    const cpfValido = isValidCPF(formData.cpf) // Validação completa com cálculo dos dígitos verificadores
     const telefoneValido = formData.telefone.replace(/\D/g, '').length >= 10
     const emailValido = formData.email.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
     const enderecoValido = formData.endereco.trim() !== ''
@@ -140,6 +181,8 @@ export default function RegistrationFormSection() {
       newErrors.cpf = 'CPF é obrigatório'
     } else if (formData.cpf.replace(/\D/g, '').length !== 11) {
       newErrors.cpf = 'CPF deve conter 11 dígitos'
+    } else if (!isValidCPF(formData.cpf)) {
+      newErrors.cpf = 'CPF inválido. Verifique os dígitos informados.'
     }
 
     if (!formData.telefone.trim()) {
@@ -173,19 +216,42 @@ export default function RegistrationFormSection() {
       return
     }
 
+    // Validação do reCAPTCHA
+    const captchaToken = (document.getElementById('g-recaptcha-response') as HTMLTextAreaElement)?.value
+
+    if (!captchaToken) {
+      alert('Por favor, confirme o reCAPTCHA.')
+      return
+    }
+
     setIsSubmitting(true)
 
-    // Aqui você pode integrar com sua API ou enviar para WhatsApp
-    // Por enquanto, apenas simula o envio
-    setTimeout(() => {
-      setIsSubmitting(false)
-      
+    try {
+      // Envia os dados para a API
+      const response = await fetch('/api/innovanation/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          terms,
+          captchaToken,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao enviar formulário')
+      }
+
       // Ativa o efeito de confete apenas uma vez
       if (!hasShownConfetti) {
         setShowConfetti(true)
         setHasShownConfetti(true)
       }
-      
+
       // Mostra o alerta após um pequeno delay para o confete aparecer
       setTimeout(() => {
         alert('Formulário enviado com sucesso! Em breve entraremos em contato.')
@@ -203,11 +269,21 @@ export default function RegistrationFormSection() {
         setTerms({
           termoAdesao: false
         })
+        setHasOpenedModal(false)
         // Reset do estado do confete após resetar o formulário
         setShowConfetti(false)
         setHasShownConfetti(false)
+        // Reset do reCAPTCHA
+        if (typeof window !== 'undefined' && (window as any).grecaptcha) {
+          ;(window as any).grecaptcha.reset()
+        }
       }, 500)
-    }, 1500)
+    } catch (error) {
+      console.error('Erro ao enviar formulário:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao enviar formulário. Tente novamente.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -308,7 +384,23 @@ export default function RegistrationFormSection() {
                 onChange={(e) => {
                   const formatted = formatCPF(e.target.value)
                   setFormData(prev => ({ ...prev, cpf: formatted }))
-                  if (errors.cpf) {
+                  
+                  // Validação em tempo real
+                  const cpfNumbers = formatted.replace(/\D/g, '')
+                  if (cpfNumbers.length === 11) {
+                    if (!isValidCPF(formatted)) {
+                      setErrors(prev => ({
+                        ...prev,
+                        cpf: 'CPF inválido. Verifique os dígitos informados.'
+                      }))
+                    } else {
+                      setErrors(prev => {
+                        const newErrors = { ...prev }
+                        delete newErrors.cpf
+                        return newErrors
+                      })
+                    }
+                  } else if (errors.cpf) {
                     setErrors(prev => {
                       const newErrors = { ...prev }
                       delete newErrors.cpf
@@ -496,6 +588,16 @@ export default function RegistrationFormSection() {
             onAccept={handleAcceptTerms}
             isAccepted={terms.termoAdesao}
           />
+
+          {/* reCAPTCHA */}
+          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
+            <div className="flex justify-center">
+              <div
+                className="g-recaptcha"
+                data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+              />
+            </div>
+          </div>
 
           {/* Botão de Submit */}
           <div className="flex justify-center pt-4">
