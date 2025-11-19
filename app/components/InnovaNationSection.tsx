@@ -39,7 +39,7 @@ export default function InnovaNationSection() {
   ]
 
   return (
-    <section className="relative py-20 px-4">
+    <section className="relative py-16 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Título da Seção */}
         <div className="text-center mb-16">

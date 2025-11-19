@@ -24,8 +24,6 @@ export default function Home() {
         {/* Registration Form Section */}
         <RegistrationFormSection />
 
-        {/* Final CTA Section */}
-        <CTASection />
       </main>
     </>
   );

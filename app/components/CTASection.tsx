@@ -5,7 +5,7 @@ import { whatsappConfig } from '../config/whatsapp'
 
 export default function CTASection() {
   return (
-    <section className="relative py-20 px-4">
+    <section className="relative py-16 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-gradient-to-br from-[#25D366]/5 via-[#25D366]/5 to-transparent rounded-3xl p-8 sm:p-12 border border-[#25D366]/20 backdrop-blur-sm">
           <div className="text-center space-y-6">
