@@ -5,25 +5,25 @@ import { Star, Quote } from 'lucide-react'
 
 const testimonials = [
   {
-    name: 'Maria Silva',
-    role: 'CEO, TechStart',
-    content: 'A Innovatis transformou completamente nossa presença digital. Resultados incríveis em pouco tempo!',
+    name: 'Marcus Varandas',
+    role: 'Founder @equityclub.mls | Sócio @hofacapital | Founder Menew',
+    content: 'A INNOVATIS vem mudando o mercado com soluções que atendem a dor real do cliente.',
     rating: 5,
-    avatar: 'https://i.pravatar.cc/150?img=47' // Foto placeholder - substitua por URL real
+    avatar: '/foto_depoimentos/foto_varandas.png'
   },
   {
-    name: 'João Santos',
-    role: 'Diretor, InovaCorp',
-    content: 'Profissionalismo e dedicação excepcionais. Recomendo sem hesitação para qualquer empresa.',
+    name: 'Carlos Alexandre',
+    role: 'Pró-reitor de Extensão do IFMA',
+    content: 'Com a INNOVATIS, fortalecemos ações no social, na capacitação e na inovação pública.',
     rating: 5,
-    avatar: 'https://i.pravatar.cc/150?img=12' // Foto placeholder - substitua por URL real
+    avatar: '/foto_depoimentos/foto_carlos_alexandre.png'
   },
   {
-    name: 'Ana Costa',
-    role: 'Fundadora, Digital Solutions',
-    content: 'Soluções inovadoras que superaram todas as expectativas. Parceiros de confiança!',
+    name: 'Davys Negreiro',
+    role: 'Assessor Especial Reitoria IFRO',
+    content: 'Já plantamos uma parceria semente que vai beneficiar toda Rondônia com a INNOVATIS.',
     rating: 5,
-    avatar: 'https://i.pravatar.cc/150?img=32' // Foto placeholder - substitua por URL real
+    avatar: '/foto_depoimentos/foto_davys.png',
   }
 ]
 
@@ -63,7 +63,7 @@ export default function TestimonialsSection() {
                       alt={testimonial.name}
                       width={80}
                       height={80}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${index === 1 ? 'object-[80%_center]' : 'object-center'}`}
                     />
                   </div>
                   {/* Badge de verificação */}
