@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight, X, AlertCircle } from 'lucide-react'
 import IdentityUploadSection from './IdentityUploadSection'
 import TermsModal from './TermsModal'
@@ -31,6 +32,7 @@ export default function RegistrationFormSection() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [hasShownConfetti, setHasShownConfetti] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -332,15 +334,35 @@ export default function RegistrationFormSection() {
     setTimeout(() => {
       setIsSubmitting(false)
       
-      // Ativa o efeito de confete apenas uma vez
+      // Mostra a mensagem de sucesso
+      setShowSuccessMessage(true)
+      
+      // Ativa o efeito de confete 3 vezes com intervalos
       if (!hasShownConfetti) {
-        setShowConfetti(true)
         setHasShownConfetti(true)
+        
+        // Primeira explosão imediatamente
+        setShowConfetti(true)
+        
+        // Segunda explosão após 1.5 segundos
+        setTimeout(() => {
+          setShowConfetti(false)
+          setTimeout(() => {
+            setShowConfetti(true)
+          }, 100) // Pequeno delay para resetar o trigger
+        }, 1500)
+        
+        // Terceira explosão após 3 segundos
+        setTimeout(() => {
+          setShowConfetti(false)
+          setTimeout(() => {
+            setShowConfetti(true)
+          }, 100) // Pequeno delay para resetar o trigger
+        }, 3000)
       }
       
-      // Mostra o alerta após um pequeno delay para o confete aparecer
+      // Reset form após todas as explosões terminarem
       setTimeout(() => {
-        alert('Formulário enviado com sucesso! Em breve entraremos em contato.')
         // Reset form
         setFormData({
           nomeCompleto: '',
@@ -360,13 +382,55 @@ export default function RegistrationFormSection() {
         // Reset do estado do confete após resetar o formulário
         setShowConfetti(false)
         setHasShownConfetti(false)
-      }, 500)
+        // Não fecha a mensagem automaticamente - usuário deve fechar manualmente
+      }, 8000) // Tempo suficiente para as 3 explosões
     }, 1500)
   }
 
   return (
     <>
       <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
+      
+      {/* Mensagem de Sucesso Minimalista */}
+      {showSuccessMessage && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none animate-fadeIn"
+          style={{ animationDelay: '0.3s' }}
+        >
+          <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/85 to-gray-900/90 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl max-w-md mx-4 transform transition-all duration-500 pointer-events-auto relative">
+            {/* Botão de Fechar */}
+            <button
+              onClick={() => setShowSuccessMessage(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 group"
+              aria-label="Fechar mensagem"
+            >
+              <X className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </button>
+            
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-24 h-24 flex items-center justify-center">
+                <Image
+                  src="/logo_innovatis_oficial.svg"
+                  alt="Logo Innovatis"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-contain"
+                  priority
+                />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                  Inscrição Enviada!
+                </h3>
+                <p className="text-gray-300 text-sm sm:text-base font-normal leading-relaxed">
+                  Seus dados estão em análise pela nossa equipe. Em breve, entraremos em contato.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <section className="relative py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Título da Seção */}
