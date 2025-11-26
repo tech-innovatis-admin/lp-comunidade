@@ -12,9 +12,10 @@ interface FileWithPreview {
 
 interface IdentityUploadSectionProps {
   onFilesChange?: (hasFiles: boolean) => void
+  onFileSelected?: (file: File | null) => void
 }
 
-export default function IdentityUploadSection({ onFilesChange }: IdentityUploadSectionProps) {
+export default function IdentityUploadSection({ onFilesChange, onFileSelected }: IdentityUploadSectionProps) {
   const [uploadType, setUploadType] = useState<UploadType>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [photoFiles, setPhotoFiles] = useState<FileWithPreview[]>([])
@@ -70,6 +71,7 @@ export default function IdentityUploadSection({ onFilesChange }: IdentityUploadS
         })
         // Notifica o componente pai que há arquivo
         onFilesChange?.(true)
+        onFileSelected?.(file)
       }
     }
   }
@@ -98,8 +100,13 @@ export default function IdentityUploadSection({ onFilesChange }: IdentityUploadS
         delete newErrors.photo
         return newErrors
       })
-      // Notifica o componente pai que há arquivo
+      // Notifica o componente pai que há arquivo (usa a primeira foto ou combina)
       onFilesChange?.(true)
+      // Para múltiplas fotos, podemos criar um arquivo combinado ou usar o primeiro
+      // Por enquanto, vamos usar o primeiro arquivo
+      if (validFiles.length > 0) {
+        onFileSelected?.(validFiles[0].file)
+      }
     }
   }
 
@@ -110,6 +117,7 @@ export default function IdentityUploadSection({ onFilesChange }: IdentityUploadS
     }
     // Notifica o componente pai que não há mais arquivo
     onFilesChange?.(false)
+    onFileSelected?.(null)
   }
 
   const removePhoto = (index: number) => {
@@ -119,6 +127,7 @@ export default function IdentityUploadSection({ onFilesChange }: IdentityUploadS
       const newPhotos = prev.filter((_, i) => i !== index)
       // Notifica o componente pai sobre o estado atual
       onFilesChange?.(newPhotos.length > 0)
+      onFileSelected?.(newPhotos.length > 0 ? newPhotos[0].file : null)
       return newPhotos
     })
   }

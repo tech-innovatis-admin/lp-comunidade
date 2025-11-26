@@ -6,6 +6,7 @@ import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOp
 import IdentityUploadSection from './IdentityUploadSection'
 import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
+import { fetchActiveTerms, submitRegistration, type TermsResponse } from '@/lib/api'
 
 export default function RegistrationFormSection() {
   const [formData, setFormData] = useState({
@@ -23,16 +24,59 @@ export default function RegistrationFormSection() {
     termoAdesao: false
   })
 
+  const [activeTerms, setActiveTerms] = useState<TermsResponse | null>(null)
+  const [isLoadingTerms, setIsLoadingTerms] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [hasOpenedModal, setHasOpenedModal] = useState(false) // Novo estado para rastrear se o modal foi aberto
-  const [hasIdentityDocument, setHasIdentityDocument] = useState(false) // Estado para rastrear se documento foi enviado
-  const [showMissingFieldsModal, setShowMissingFieldsModal] = useState(false) // Estado para controlar modal de campos pendentes
-  const [missingFieldsList, setMissingFieldsList] = useState<string[]>([]) // Lista de campos pendentes
+  const [hasOpenedModal, setHasOpenedModal] = useState(false)
+  const [hasIdentityDocument, setHasIdentityDocument] = useState(false)
+  const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null)
+  const [showMissingFieldsModal, setShowMissingFieldsModal] = useState(false)
+  const [missingFieldsList, setMissingFieldsList] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [hasShownConfetti, setHasShownConfetti] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  
+  // Variante fixa: MANUAL
+  const variant = 'MANUAL'
+
+  // Busca termos ativos ao carregar
+  useEffect(() => {
+    async function loadTerms() {
+      try {
+        setIsLoadingTerms(true)
+        const termsData = await fetchActiveTerms()
+        setActiveTerms(termsData)
+      } catch (error) {
+        console.error('Erro ao carregar termos:', error)
+        setErrors(prev => ({ ...prev, terms: 'Erro ao carregar termos de uso' }))
+      } finally {
+        setIsLoadingTerms(false)
+      }
+    }
+    loadTerms()
+  }, [])
+
+  // Bloqueia scroll quando popup de sucesso está aberto
+  useEffect(() => {
+    if (showSuccessMessage) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.width = '100%'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
+    
+    // Cleanup ao desmontar
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
+  }, [showSuccessMessage])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -327,14 +371,40 @@ export default function RegistrationFormSection() {
       return
     }
 
+    if (!idDocumentFile) {
+      setErrors(prev => ({ ...prev, document: 'Documento de identidade é obrigatório' }))
+      return
+    }
+
+    if (!activeTerms) {
+      setErrors(prev => ({ ...prev, terms: 'Termos de uso não carregados' }))
+      return
+    }
+
     setIsSubmitting(true)
 
-    // Aqui você pode integrar com sua API ou enviar para WhatsApp
-    // Por enquanto, apenas simula o envio
-    setTimeout(() => {
+    try {
+      // Prepara FormData
+      const formDataToSend = new FormData()
+      formDataToSend.append('fullName', formData.nomeCompleto.trim())
+      formDataToSend.append('profession', formData.profissao.trim())
+      formDataToSend.append('organization', formData.empresa.trim())
+      formDataToSend.append('cpf', formData.cpf.replace(/\D/g, ''))
+      formDataToSend.append('phone', formData.telefone.trim())
+      formDataToSend.append('email', formData.email.trim().toLowerCase())
+      formDataToSend.append('address', formData.endereco.trim())
+      formDataToSend.append('projects', formData.projetos.trim() || '')
+      formDataToSend.append('termsId', activeTerms.id.toString())
+      formDataToSend.append('termsVersion', activeTerms.version)
+      formDataToSend.append('variant', variant)
+      formDataToSend.append('idDocumentFile', idDocumentFile)
+
+      // Envia para API
+      await submitRegistration(formDataToSend)
+
       setIsSubmitting(false)
-      
-      // Mostra a mensagem de sucesso
+
+      // Mostra a mensagem de sucesso (o useEffect vai bloquear o scroll)
       setShowSuccessMessage(true)
       
       // Ativa o efeito de confete 3 vezes com intervalos
@@ -349,7 +419,7 @@ export default function RegistrationFormSection() {
           setShowConfetti(false)
           setTimeout(() => {
             setShowConfetti(true)
-          }, 100) // Pequeno delay para resetar o trigger
+          }, 100)
         }, 1500)
         
         // Terceira explosão após 3 segundos
@@ -357,13 +427,12 @@ export default function RegistrationFormSection() {
           setShowConfetti(false)
           setTimeout(() => {
             setShowConfetti(true)
-          }, 100) // Pequeno delay para resetar o trigger
+          }, 100)
         }, 3000)
       }
       
       // Reset form após todas as explosões terminarem
       setTimeout(() => {
-        // Reset form
         setFormData({
           nomeCompleto: '',
           profissao: '',
@@ -379,28 +448,51 @@ export default function RegistrationFormSection() {
         })
         setHasOpenedModal(false)
         setHasIdentityDocument(false)
-        // Reset do estado do confete após resetar o formulário
+        setIdDocumentFile(null)
         setShowConfetti(false)
         setHasShownConfetti(false)
-        // Não fecha a mensagem automaticamente - usuário deve fechar manualmente
-      }, 8000) // Tempo suficiente para as 3 explosões
-    }, 1500)
+        // O useEffect vai restaurar o scroll automaticamente quando showSuccessMessage mudar
+      }, 8000)
+    } catch (error: any) {
+      setIsSubmitting(false)
+      setErrors(prev => ({ 
+        ...prev, 
+        submit: error.message || 'Erro ao enviar inscrição. Tente novamente.' 
+      }))
+      console.error('Erro ao enviar inscrição:', error)
+    }
   }
 
   return (
     <>
       <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
       
-      {/* Mensagem de Sucesso Minimalista */}
+      {/* Mensagem de Sucesso com Backdrop */}
       {showSuccessMessage && (
         <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none animate-fadeIn"
-          style={{ animationDelay: '0.3s' }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 animate-fadeIn overflow-hidden"
+          style={{ 
+            animationDelay: '0.3s', 
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowSuccessMessage(false)
+            }
+          }}
         >
-          <div className="bg-gradient-to-br from-gray-900/90 via-gray-800/85 to-gray-900/90 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl max-w-md mx-4 transform transition-all duration-500 pointer-events-auto relative">
+          <div className="bg-gradient-to-br from-gray-900/95 via-gray-800/90 to-gray-900/95 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl max-w-md mx-4 transform transition-all duration-500 relative z-[10000]">
             {/* Botão de Fechar */}
             <button
-              onClick={() => setShowSuccessMessage(false)}
+              onClick={() => {
+                setShowSuccessMessage(false)
+              }}
               className="absolute top-4 right-4 p-2 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 group"
               aria-label="Fechar mensagem"
             >
@@ -675,7 +767,10 @@ export default function RegistrationFormSection() {
           </div>
 
           {/* Seção de Upload de Identidade */}
-          <IdentityUploadSection onFilesChange={setHasIdentityDocument} />
+          <IdentityUploadSection 
+            onFilesChange={setHasIdentityDocument}
+            onFileSelected={setIdDocumentFile}
+          />
 
           {/* Botão e Checkbox de Termos */}
           <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700/50">
@@ -739,6 +834,8 @@ export default function RegistrationFormSection() {
             onClose={handleCloseModal}
             onAccept={handleAcceptTerms}
             isAccepted={terms.termoAdesao}
+            termsContent={activeTerms?.content_html || ''}
+            isLoading={isLoadingTerms}
           />
 
           {/* Modal de Campos Pendentes */}
