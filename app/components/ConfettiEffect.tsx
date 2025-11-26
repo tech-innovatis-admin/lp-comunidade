@@ -179,7 +179,7 @@ class ConfettiManager {
 
   constructor() {
     this.canvas = document.createElement("canvas")
-    this.canvas.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; pointer-events: none;"
+    this.canvas.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1000; pointer-events: none; overflow: hidden;"
     document.body.appendChild(this.canvas)
     const ctx = this.canvas.getContext("2d")
     if (!ctx) throw new Error("Could not get 2d context")
@@ -193,11 +193,18 @@ class ConfettiManager {
   }
 
   resizeCanvas() {
-    const dpr = window.devicePixelRatio
-    this.canvas.width = window.innerWidth * dpr
-    this.canvas.height = window.innerHeight * dpr
-    this.canvas.style.width = `${window.innerWidth}px`
-    this.canvas.style.height = `${window.innerHeight}px`
+    const dpr = window.devicePixelRatio || 1
+    // Usa dimensões fixas do viewport para evitar overflow
+    const width = Math.min(window.innerWidth, document.documentElement.clientWidth)
+    const height = Math.min(window.innerHeight, document.documentElement.clientHeight)
+    
+    this.canvas.width = width * dpr
+    this.canvas.height = height * dpr
+    this.canvas.style.width = `${width}px`
+    this.canvas.style.height = `${height}px`
+    
+    // Reset da escala antes de aplicar nova
+    this.context.setTransform(1, 0, 0, 1, 0, 0)
     this.context.scale(dpr, dpr)
   }
 
@@ -238,12 +245,21 @@ class ConfettiManager {
     const deltaTime = currentTime - this.lastUpdated
     this.lastUpdated = currentTime
 
+    // Limpa o canvas completamente usando as dimensões reais
+    const dpr = window.devicePixelRatio || 1
+    this.context.setTransform(1, 0, 0, 1, 0, 0)
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    this.context.scale(dpr, dpr)
 
     const canvasHeight = window.innerHeight
+    const canvasWidth = window.innerWidth
+    
     this.confetti = this.confetti.filter((item) => {
       item.updatePosition(deltaTime, currentTime)
-      item.draw(this.context)
+      // Só desenha se estiver dentro dos limites do canvas
+      if (item.position.x >= -50 && item.position.x <= canvasWidth + 50) {
+        item.draw(this.context)
+      }
       return item.isVisible(canvasHeight)
     })
 
