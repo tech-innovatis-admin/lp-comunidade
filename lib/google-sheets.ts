@@ -18,6 +18,7 @@ interface RegistrationData {
   projects: string;
   status: string;
   created_at?: Date;
+  document_view_url?: string | null; // URL assinada do S3 para visualização do documento
 }
 
 /**
@@ -155,7 +156,16 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Prepara os dados para a planilha
-    // Ordem das colunas: ID, Data, Nome, Email, Telefone, CPF, Profissão, Empresa, Endereço, Projetos, Status
+    // Ordem das colunas: ID, Data, Nome, Email, Telefone, CPF, Profissão, Empresa, Endereço, Projetos, Status, Documento
+    // Se houver URL do documento, insere apenas a URL
+    // O Google Sheets automaticamente cria um link clicável quando detecta uma URL válida
+    // Solução simples e confiável: inserir URL diretamente (Google Sheets cria link automaticamente)
+    const documentCell = registration.document_view_url || 'Armazenado no Banco (PostgreSQL)';
+    
+    if (registration.document_view_url) {
+      console.log(`🔗 Google Sheets: Inserindo URL do documento: ${registration.document_view_url}`);
+    }
+    
     const values = [
       [
         registration.id,
@@ -169,7 +179,7 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
         registration.address,
         registration.projects,
         registration.status,
-        'Armazenado no Banco (PostgreSQL)' // Documento
+        documentCell
       ],
     ];
 
@@ -178,7 +188,7 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
       await sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
         range: 'Inscrições!A:L',
-        valueInputOption: 'USER_ENTERED',
+        valueInputOption: 'USER_ENTERED', // USER_ENTERED interpreta fórmulas
         requestBody: {
           values,
         },

@@ -9,6 +9,35 @@ import { isValidFileType, isValidFileSize } from '@/lib/s3';
 import { calculateHash, calculateFileHash, generateSecureToken, isValidCPF, isValidEmail, getClientIP } from '@/lib/utils';
 import { appendRegistrationToSheet } from '@/lib/google-sheets';
 
+/**
+ * Envia dados para webhook N8N
+ * @param data Dados completos do registro
+ */
+async function sendToN8NWebhook(data: any) {
+  const webhookUrl = 'https://v1teste.app.n8n.cloud/webhook-test/kriscia-comunidade';
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      console.error(`Webhook N8N falhou: ${response.status} ${response.statusText}`);
+      return false;
+    }
+
+    console.log('✅ Webhook N8N enviado com sucesso');
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao enviar webhook N8N:', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse do FormData
@@ -145,13 +174,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verifica duplicatas (email e CPF únicos)
+    const cleanCpf = cpf.replace(/\D/g, '');
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Verifica se email já existe
+    const existingEmail = await queryOne<{ id: number }>(
+      'SELECT id FROM registrations WHERE email = $1 LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (existingEmail) {
+      return NextResponse.json(
+        {
+          error: 'Email já cadastrado',
+          message: 'Este endereço de e-mail já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
+        },
+        { status: 409 }
+      );
+    }
+
+    // Verifica se CPF já existe
+    const existingCpf = await queryOne<{ id: number }>(
+      'SELECT id FROM registrations WHERE cpf = $1 LIMIT 1',
+      [cleanCpf]
+    );
+
+    if (existingCpf) {
+      return NextResponse.json(
+        {
+          error: 'CPF já cadastrado',
+          message: 'Este CPF já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
+        },
+        { status: 409 }
+      );
+    }
+
     // Calcula fingerprint do registro (hash de todos os dados críticos)
     // Serve como prova de integridade total do registro
-    const cleanCpf = cpf.replace(/\D/g, '');
     const fingerprintData = [
       fullName.trim(),
       cleanCpf,
-      email.trim().toLowerCase(),
+      cleanEmail,
       documentHash,
       activeTerm.content_hash,
       activeTerm.version,
@@ -202,7 +266,7 @@ export async function POST(request: NextRequest) {
           email.trim().toLowerCase(),
           address.trim() || null,
           projects.trim() || null,
-          fileBuffer, // BYTEA - documento armazenado diretamente no PostgreSQL
+          fileBuffer, // BYTEA - documento armazenado diretamente no PostgreSQL (garantia jurídica)
           documentHash, // SHA-256 para verificação de integridade do documento
           documentSize, // Tamanho em bytes
           originalFilename, // Nome original do arquivo
@@ -228,28 +292,74 @@ export async function POST(request: NextRequest) {
       // Executamos de forma assíncrona dentro da transação? Não, idealmente após o commit.
       // Mas como estamos dentro de uma função transaction wrapper, o commit acontece ao retornar.
       // Vamos retornar os dados necessários para executar APÓS a transação.
-      return { 
+      // Gera URL permanente para visualização do documento
+      // Usa a própria API como fonte (endpoint /api/documents/[id])
+      const baseUrl = process.env.PUBLIC_BASE_URL || 'https://comunidade.innovatismc.com';
+      const documentViewUrl = `${baseUrl}/api/documents/${registrationId}`;
+
+      // Prepara dados completos para Google Sheets e N8N
+      const completeData = {
+        id: registrationId,
+        full_name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim() || '',
+        cpf: cleanCpf,
+        profession: profession.trim() || '',
+        organization: organization.trim() || '',
+        address: address.trim() || '',
+        projects: projects.trim() || '',
+        status: 'PENDING',
+        document_view_url: documentViewUrl, // URL permanente para visualização na planilha
+        // Dados adicionais para N8N (não vão para Sheets)
+        document_hash: documentHash,
+        document_size: documentSize,
+        document_mime_type: mimeType,
+        document_original_filename: originalFilename,
+        terms_version: activeTerm.version,
+        terms_content_hash: activeTerm.content_hash,
+        registration_fingerprint: registrationFingerprint,
+        client_ip: clientIP,
+        user_agent: userAgent,
+        accept_language: acceptLanguage,
+        referer: referer,
+        x_forwarded_for: xForwardedFor,
+        sec_ch_ua: secChUa,
+        sec_ch_ua_platform: secChUaPlatform,
+        sec_ch_ua_mobile: secChUaMobile,
+        variant: variant,
+        created_at: new Date().toISOString()
+      };
+
+      return {
         registrationId,
-        registrationData: {
-          id: registrationId,
-          full_name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim() || '',
-          cpf: cleanCpf,
-          profession: profession.trim() || '',
-          organization: organization.trim() || '',
-          address: address.trim() || '',
-          projects: projects.trim() || '',
-          status: 'PENDING'
-        }
+        registrationData: completeData
       };
     });
 
-    // Executa integração com Google Sheets após sucesso no banco (fora da transação)
+    // Executa integrações após sucesso no banco (fora da transação)
     if (result.registrationData) {
-      // Dispara sem await para não bloquear a resposta ao usuário
-      appendRegistrationToSheet(result.registrationData)
+      // Prepara dados específicos para Google Sheets (apenas campos necessários)
+      const sheetsData = {
+        id: result.registrationData.id,
+        full_name: result.registrationData.full_name,
+        email: result.registrationData.email,
+        phone: result.registrationData.phone,
+        cpf: result.registrationData.cpf,
+        profession: result.registrationData.profession,
+        organization: result.registrationData.organization,
+        address: result.registrationData.address,
+        projects: result.registrationData.projects,
+        status: result.registrationData.status,
+        document_view_url: result.registrationData.document_view_url
+      };
+
+      // 1. Integração com Google Sheets
+      appendRegistrationToSheet(sheetsData)
         .catch(err => console.error('Erro na exportação assíncrona para Sheets:', err));
+
+      // 2. Webhook N8N - envia dados completos
+      sendToN8NWebhook(result.registrationData)
+        .catch(err => console.error('Erro no webhook N8N (não afeta o cadastro):', err));
     }
 
     return NextResponse.json({

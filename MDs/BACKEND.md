@@ -175,6 +175,74 @@ Recebe inscrições na comunidade.
 }
 ```
 
+### 🪝 Webhook N8N
+
+Após o processamento bem-sucedido de uma inscrição, o sistema automaticamente envia um webhook para o N8N com todos os dados do cadastro.
+
+**URL do Webhook:** `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
+
+**Método:** `POST`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Payload Enviado:**
+```json
+{
+  "id": 123,
+  "full_name": "João Silva",
+  "email": "joao@email.com",
+  "phone": "+55 11 99999-9999",
+  "cpf": "12345678901",
+  "profession": "Desenvolvedor",
+  "organization": "Empresa Ltda",
+  "address": "Rua ABC, 123",
+  "projects": "Projetos de inovação",
+  "status": "PENDING",
+  "document_view_url": "https://comunidade.innovatismc.com/api/documents/123",
+  "document_hash": "abc123def456...",
+  "document_size": 2048576,
+  "document_mime_type": "application/pdf",
+  "document_original_filename": "documento.pdf",
+  "terms_version": "v1.0",
+  "terms_content_hash": "hash_termos_123...",
+  "registration_fingerprint": "fingerprint_456...",
+  "client_ip": "192.168.1.100",
+  "user_agent": "Mozilla/5.0...",
+  "accept_language": "pt-BR,pt;q=0.9",
+  "referer": "https://comunidade.innovatismc.com",
+  "x_forwarded_for": "192.168.1.100",
+  "sec_ch_ua": "\"Google Chrome\";v=\"119\"",
+  "sec_ch_ua_platform": "\"Windows\"",
+  "sec_ch_ua_mobile": "?0",
+  "variant": "MANUAL",
+  "created_at": "2025-11-26T12:00:00.000Z"
+}
+```
+
+**Características:**
+- ✅ **Assíncrono**: Não bloqueia a resposta ao usuário
+- ✅ **Falha Segura**: Se o webhook falhar, o cadastro continua válido
+- ✅ **Dados Completos**: Inclui todos os campos + metadados de rastreabilidade
+- ✅ **Retry**: Implementado na aplicação (não afeta o fluxo principal)
+
+**Configuração no N8N:**
+1. Criar workflow com trigger **Webhook**
+2. Configurar **HTTP Method**: `POST`
+3. Usar **Production URL**: `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
+4. **Ativar o workflow** para que a URL de produção funcione
+5. O payload JSON estará disponível em `$json` nos próximos nós
+
+**Teste do Webhook:**
+```bash
+# Executar teste local
+node scripts/test-webhook.js
+```
+
+**Nota:** O webhook retorna 404 até que o workflow seja criado e ativado no N8N.
+
 ### GET `/api/convite/:token`
 
 Redireciona para o grupo WhatsApp usando token único.

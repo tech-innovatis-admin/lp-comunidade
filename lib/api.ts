@@ -42,7 +42,10 @@ export async function submitRegistration(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    throw new Error(error.error || 'Erro ao enviar inscrição');
+    const errorWithStatus = new Error(error.message || error.error || 'Erro ao enviar inscrição');
+    (errorWithStatus as any).status = response.status;
+    (errorWithStatus as any).message = error.message || error.error || 'Erro ao enviar inscrição';
+    throw errorWithStatus;
   }
 
   return response.json();
