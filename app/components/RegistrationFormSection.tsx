@@ -37,7 +37,9 @@ export default function RegistrationFormSection() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [hasShownConfetti, setHasShownConfetti] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-  
+  const [showDuplicateErrorModal, setShowDuplicateErrorModal] = useState(false)
+  const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('')
+
   // Variante fixa: MANUAL
   const variant = 'MANUAL'
 
@@ -455,10 +457,18 @@ export default function RegistrationFormSection() {
       }, 8000)
     } catch (error: any) {
       setIsSubmitting(false)
-      setErrors(prev => ({ 
-        ...prev, 
-        submit: error.message || 'Erro ao enviar inscrição. Tente novamente.' 
-      }))
+
+      // Verifica se é erro de duplicata (409 - Conflict)
+      if (error.status === 409) {
+        setDuplicateErrorMessage(error.message || 'Email ou CPF já cadastrado.')
+        setShowDuplicateErrorModal(true)
+      } else {
+        setErrors(prev => ({
+          ...prev,
+          submit: error.message || 'Erro ao enviar inscrição. Tente novamente.'
+        }))
+      }
+
       console.error('Erro ao enviar inscrição:', error)
     }
   }
@@ -837,6 +847,64 @@ export default function RegistrationFormSection() {
             termsContent={activeTerms?.content_html || ''}
             isLoading={isLoadingTerms}
           />
+
+          {/* Modal de Erro de Duplicata */}
+          {showDuplicateErrorModal && (
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 animate-fadeIn"
+              style={{
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowDuplicateErrorModal(false)
+                }
+              }}
+            >
+              <div className="bg-gradient-to-br from-red-900/95 via-gray-900/90 to-red-900/95 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-red-700/50 shadow-2xl max-w-md mx-4 transform transition-all duration-500 relative z-[10000]">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-red-700/50">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-red-500/20 rounded-lg animate-pulse">
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                    </div>
+                    <h2 className="text-lg font-bold text-white">
+                      Inscrição Não Permitida
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowDuplicateErrorModal(false)}
+                    className="p-1.5 hover:bg-red-700/50 rounded-lg transition-colors"
+                    aria-label="Fechar modal"
+                  >
+                    <X className="w-4 h-4 text-gray-400 hover:text-white" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-4">
+                  <p className="text-red-200 mb-4 text-sm font-normal leading-relaxed">
+                    {duplicateErrorMessage}
+                  </p>
+
+                  <div className="flex justify-center pt-2">
+                    <button
+                      onClick={() => setShowDuplicateErrorModal(false)}
+                      className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors duration-200"
+                    >
+                      Entendi
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modal de Campos Pendentes */}
           {showMissingFieldsModal && (

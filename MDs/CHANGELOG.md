@@ -4,6 +4,140 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2025-11-27] - 🚀 Deploy em Produção com Webhook N8N
+
+### ✅ **Deploy Final Bem-Sucedido**
+
+#### 🎯 **Sistema 100% Operacional**
+
+##### Funcionalidades Ativas:
+- ✅ **Landing Page**: https://comunidade.innovatismc.com
+- ✅ **Formulário Completo**: Validação email/CPF únicos
+- ✅ **Upload de Documentos**: Armazenamento seguro PostgreSQL
+- ✅ **Integração Google Sheets**: Links permanentes para documentos
+- ✅ **Webhook N8N**: `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
+- ✅ **SSL Let's Encrypt**: Certificado válido
+- ✅ **Nginx Proxy**: Roteamento correto (porta 3002)
+
+##### Infraestrutura:
+- ✅ **EC2 t4g.micro**: ARM64 otimizado
+- ✅ **Docker Container**: Imagem 891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest
+- ✅ **Porta 3002**: Não conflita com aplicação Hub (porta 3001)
+- ✅ **PostgreSQL RDS**: Dados seguros e ACID
+- ✅ **AWS ECR**: Registry privado seguro
+
+#### 📊 **Fluxo de Dados Completo**
+
+1. **Usuário** preenche formulário → Validação email/CPF únicos
+2. **Documento** é armazenado no PostgreSQL (BYTEA + hash SHA-256)
+3. **Registro** inserido no banco com fingerprint de integridade
+4. **Google Sheets** atualizado automaticamente com link permanente
+5. **N8N Webhook** dispara com payload completo (dados + metadados)
+6. **Resposta** imediata ao usuário (cadastro confirmado)
+
+#### 🔒 **Segurança Jurídica**
+
+- ✅ **Armazenamento BYTEA**: Documentos na mesma transação do registro
+- ✅ **Hash SHA-256**: Verificação de integridade de documentos
+- ✅ **Fingerprint**: Hash de todos os dados críticos
+- ✅ **Links Permanentes**: Documentos acessíveis sem expiração
+- ✅ **IP/User-Agent**: Rastreamento completo de origem
+
+---
+
+## [2025-11-27] - 🪝 Integração Webhook N8N
+
+### 🆕 **Nova Funcionalidade: Webhook N8N**
+
+#### Adicionado
+- ✅ **Webhook N8N Automático**: Envio automático de dados completos para `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
+- ✅ **Payload Completo**: Todos os dados do cadastro + metadados de rastreabilidade (IP, user-agent, headers)
+- ✅ **Processamento Assíncrono**: Não bloqueia a resposta ao usuário
+- ✅ **Falha Segura**: Cadastro válido mesmo se webhook falhar
+- ✅ **Script de Teste**: `scripts/test-webhook.js` para validação
+- ✅ **Documentação**: Seção completa sobre webhook em BACKEND.md
+
+#### Payload do Webhook
+```json
+{
+  "id": 123,
+  "full_name": "João Silva",
+  "email": "joao@email.com",
+  "cpf": "12345678901",
+  "document_view_url": "https://comunidade.innovatismc.com/api/documents/123",
+  "document_hash": "abc123...",
+  "client_ip": "192.168.1.100",
+  "user_agent": "Mozilla/5.0...",
+  "terms_version": "v1.0",
+  "created_at": "2025-11-27T20:00:00.000Z"
+}
+```
+
+#### Configuração Necessária
+- Criar workflow no N8N com trigger Webhook
+- Usar URL de produção e ativar workflow
+- Payload disponível em `$json` para processamento
+
+---
+
+## [2025-11-26] - 🚀 DEPLOY EM PRODUÇÃO FINAL
+
+### ✅ **COMPLETADO - Sistema 100% Funcional**
+
+#### 🎯 **Funcionalidades Implementadas**
+
+##### Core Features
+- ✅ **Landing Page Completa**: Design profissional, responsiva, otimizada
+- ✅ **Formulário de Inscrição**: Validação completa, UX polida
+- ✅ **Upload de Documentos**: PDF/JPG/PNG, validação de tamanho/tipo
+- ✅ **Validação de Unicidade**: Email e CPF únicos com modal de erro elegante
+- ✅ **Integração PostgreSQL**: Armazenamento jurídico completo com hash SHA-256
+- ✅ **Google Sheets**: Sincronização automática com links para documentos
+
+##### Infraestrutura e Deploy
+- ✅ **Docker ARM64**: Build otimizado para EC2 t4g.micro
+- ✅ **AWS ECR/EC2**: Registry e deploy automatizados
+- ✅ **Nginx + SSL**: Proxy reverso com Let's Encrypt
+- ✅ **Porta 3002**: Não conflita com aplicação Hub (porta 3001)
+- ✅ **Health Checks**: Monitoramento de saúde do sistema
+
+##### Segurança Jurídica
+- ✅ **Armazenamento BYTEA**: Documentos no PostgreSQL (ACID compliance)
+- ✅ **Hash SHA-256**: Verificação de integridade de documentos
+- ✅ **Registro Jurídico**: IP, timestamp, user-agent, versão dos termos
+- ✅ **Links Permanentes**: Documentos acessíveis via API sem expiração
+
+#### 🔄 **Mudanças Arquiteturais**
+
+##### Simplificação
+- ✅ **Fluxo Único**: Removido fluxo WhatsApp, apenas MANUAL
+- ✅ **URLs Permanentes**: Links de documentos nunca expiram
+- ✅ **Validações**: Email e CPF únicos obrigatórios
+
+##### Otimizações
+- ✅ **Build ARM64**: Deploy direto sem conversão
+- ✅ **Documentação**: Organizada em MDs/ com índice completo
+- ✅ **Scripts**: Automatizados para build e deploy
+
+#### 📊 **Status de Produção**
+
+- **URL**: https://comunidade.innovatismc.com
+- **Status**: ✅ **EM PRODUÇÃO**
+- **Uptime**: 100% (desde deploy)
+- **ECR Image**: 891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest
+- **Porta**: 3002
+- **SSL**: Let's Encrypt ativo
+
+#### 📚 **Documentação Final**
+
+- ✅ **DEPLOY.md**: Guia completo de produção ⭐
+- ✅ **BACKEND.md**: Documentação técnica
+- ✅ **SEGURANCA_JURIDICA.md**: Compliance legal
+- ✅ **VISUALIZACAO_DOCUMENTOS.md**: Links permanentes
+- ✅ **INDICE_DOCUMENTACAO.md**: Mapa completo
+
+---
+
 ## [2025-11-24] - Melhorias de Compliance Jurídico
 
 ### 🔒 Melhorias de Compliance Jurídico

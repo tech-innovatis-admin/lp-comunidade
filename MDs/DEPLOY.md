@@ -1,19 +1,22 @@
 # 🚀 Guia de Deploy - Landing Page Comunidade InnovaNation
 
-**Status**: ✅ Em Produção  
+**Status**: ✅ **EM PRODUÇÃO**  
 **URL**: https://comunidade.innovatismc.com  
-**Última atualização**: 26 de Novembro de 2025
+**Último Deploy**: 27 de Novembro de 2025  
+**Imagem ECR**: 891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest  
+**Porta**: 3002
 
 ---
 
 ## 📋 Resumo da Arquitetura
 
 - **Aplicação**: Next.js 15 (ARM64)
-- **Container**: Docker no EC2 (porta 3002)
+- **Container**: Docker no EC2 t4g.micro (porta 3002)
 - **Banco**: PostgreSQL (RDS AWS)
 - **Storage**: S3 para credenciais Google
-- **Integração**: Google Sheets para tracking
+- **Integração**: Google Sheets para tracking + **N8N Webhook automático**
 - **Proxy**: Nginx com SSL (Let's Encrypt)
+- **Validação**: Email e CPF únicos
 
 ---
 
@@ -80,14 +83,23 @@ EOF
 
 ### Configuração Nginx
 
-```bash
-sudo tee /etc/nginx/conf.d/landing-comunidade.conf > /dev/null << 'EOF'
+**⚠️ IMPORTANTE**: Ajustes para evitar truncamento de PDFs (observamos corte em ~32KB por renegociação SSL). Use esta configuração no arquivo `/etc/nginx/conf.d/landing-comunidade.conf` (Certbot já gerencia os blocos de SSL, mantenha-os):
+
+```nginx
 server {
-    listen 80;
     server_name comunidade.innovatismc.com;
+
+    access_log /var/log/nginx/comunidade-access.log;
+    error_log  /var/log/nginx/comunidade-error.log;
+
+    # Limite de upload (10MB)
+    client_max_body_size 10M;
+
     location / {
         proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
+
+        # Headers básicos
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
@@ -95,13 +107,49 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-    }
-}
-EOF
 
+        # CRÍTICO: evitar truncamento/renegociação em downloads binários
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
+
+        # Timeouts ampliados para downloads maiores
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+
+        # HTTP/1.1 estável
+        proxy_set_header Connection "";
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/comunidade.innovatismc.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/comunidade.innovatismc.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}
+
+server {
+    if ($host = comunidade.innovatismc.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    listen 80;
+    server_name comunidade.innovatismc.com;
+    return 404; # managed by Certbot
+}
+```
+
+Depois de editar:
+```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+#### Troubleshooting rápido (PDF cortando/corrompido)
+- Sintoma: download para em ~32KB e o PDF abre corrompido no navegador/Acrobat.
+- Causa: renegociação/fechamento prematuro na cadeia SSL com buffering habilitado.
+- Solução: garantir `proxy_buffering off`, `proxy_request_buffering off`, `proxy_max_temp_file_size 0` e timeouts ampliados conforme acima. Validar com `curl -v -o /tmp/teste.pdf https://comunidade.innovatismc.com/api/documents/ID` (tamanho esperado ~282 KB nos casos testados).
 
 ### SSL com Certbot
 
@@ -164,7 +212,8 @@ sudo certbot certificates
 | Componente | Valor |
 |------------|-------|
 | EC2 IP | 44.214.214.210 |
-| Porta Interna | 3002 |
+| Porta Interna (app) | 3002 |
+| Nginx (host) | 80 (HTTP) / 443 (HTTPS) → proxy_pass para `127.0.0.1:3002` |
 | ECR Registry | 891612552945.dkr.ecr.us-east-1.amazonaws.com |
 | Imagem | landing-comunidade-innovatis:latest |
 | RDS Host | nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com |

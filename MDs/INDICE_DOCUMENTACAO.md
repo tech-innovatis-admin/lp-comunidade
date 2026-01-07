@@ -10,9 +10,10 @@
 | Arquivo | Descrição |
 |---------|-----------|
 | [README.md](./README.md) | Visão geral do projeto |
-| [DEPLOY.md](./DEPLOY.md) | **⭐ Guia completo de deploy** |
-| [BACKEND.md](./BACKEND.md) | Documentação técnica do backend |
+| [DEPLOY.md](./DEPLOY.md) | **⭐ Guia completo de deploy (EM PRODUÇÃO)** |
+| [BACKEND.md](./BACKEND.md) | Documentação técnica + Webhook N8N |
 | [SEGURANCA_JURIDICA.md](./SEGURANCA_JURIDICA.md) | Garantias jurídicas do sistema |
+| [VISUALIZACAO_DOCUMENTOS.md](./VISUALIZACAO_DOCUMENTOS.md) | Visualização de documentos na Google Sheets |
 
 ---
 
@@ -26,11 +27,13 @@
 
 ---
 
-## 📝 Histórico
+## 📝 Histórico e Testes
 
 | Arquivo | Descrição |
 |---------|-----------|
 | [CHANGELOG.md](./CHANGELOG.md) | Registro de mudanças |
+| [CHECKLIST_FINAL.md](../MDs/CHECKLIST_FINAL.md) | Checklist final de implementação |
+| [TESTE_DUPLICATAS.md](../MDs/TESTE_DUPLICATAS.md) | Testes de validação de duplicatas |
 
 ---
 

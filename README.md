@@ -1,6 +1,16 @@
-# Landing Page Comunidade InnovaNation
+# 🏢 Landing Page Comunidade InnovaNation
 
-Landing page para inscrições na Comunidade InnovaNation com integração PostgreSQL e Google Sheets.
+**Status**: ✅ **EM PRODUÇÃO**  
+**URL**: https://comunidade.innovatismc.com  
+**Último Deploy**: 27 de Novembro de 2025  
+
+Landing page completa para comunidade InnovaNation com:
+- ✅ Formulário de inscrição com validação completa
+- ✅ Upload de documentos de identidade
+- ✅ Integração PostgreSQL + Google Sheets
+- ✅ Validação de email e CPF únicos
+- ✅ **Webhook N8N automático** para processamento de dados
+- ✅ Deploy Docker ARM64 no EC2 t4g.micro
 
 ## 🚀 Deploy Rápido
 
@@ -43,13 +53,24 @@ cd /home/ec2-user/landing-page-innovatis
 
 ## 📚 Documentação
 
-Consulte a pasta `MDs/` para documentação completa:
+Consulte a pasta `MDs/` para documentação completa (inclui ajustes de Nginx para evitar truncamento de PDFs):
 - `MDs/README.md` - Visão geral
 - `MDs/BACKEND.md` - Documentação do backend
 - `MDs/DEPLOY_RAPIDO_LOCAL.md` - Guia de deploy
+- `MDs/DEPLOY.md` - Configuração completa (Nginx/SSL) e troubleshooting de PDFs
+
+## 🛠️ Tecnologias
+
+- **Frontend**: Next.js 15, React, Tailwind CSS, TypeScript
+- **Backend**: Next.js API Routes, PostgreSQL (RDS), Node.js ARM64
+- **Infra**: Docker ARM64, AWS ECR/EC2 t4g, Nginx, Let's Encrypt SSL
+- **Integrações**: Google Sheets API, AWS SDK v3, **N8N Webhook**
+- **Validações**: Email único, CPF único, Documentos obrigatórios
+- **Segurança**: Hash SHA-256, Armazenamento BYTEA PostgreSQL
 
 ## 🌐 URLs
 
 - **Produção:** https://comunidade.innovatismc.com
 - **Health Check:** https://comunidade.innovatismc.com/api/health
+- **Webhook N8N:** `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
 
