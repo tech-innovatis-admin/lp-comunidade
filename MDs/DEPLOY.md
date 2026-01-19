@@ -216,8 +216,8 @@ sudo certbot certificates
 | Nginx (host) | 80 (HTTP) / 443 (HTTPS) → proxy_pass para `127.0.0.1:3002` |
 | ECR Registry | 891612552945.dkr.ecr.us-east-1.amazonaws.com |
 | Imagem | landing-comunidade-innovatis:latest |
-| RDS Host | nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com |
-| Database | landing_page_comunidade |
+| RDS Host | xxxxxx.ci1kcsyewm34.us-east-1.rds.amazonaws.com |
+| Database | xxxxxxx |
 | S3 Docs | innovanation-documents |
 | S3 Creds | jsoninnovatis |
 | Google Sheet | InnovaNation - Inscrições Comunidade |
