@@ -14,7 +14,7 @@ import { appendRegistrationToSheet } from '@/lib/google-sheets';
  * @param data Dados completos do registro
  */
 async function sendToN8NWebhook(data: any) {
-  const webhookUrl = 'https://v1teste.app.n8n.cloud/webhook-test/kriscia-comunidade';
+  const webhookUrl = 'https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade';
 
   try {
     const response = await fetch(webhookUrl, {
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     // Headers adicionais para rastreabilidade jurídica completa
     const acceptLanguage = request.headers.get('accept-language') || null;
     const referer = request.headers.get('referer') || null;
-    
+
     // Normaliza X-Forwarded-For removendo prefixo IPv6 mapeado
     let xForwardedFor = request.headers.get('x-forwarded-for') || null;
     if (xForwardedFor) {
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         })
         .join(', ');
     }
-    
+
     const secChUa = request.headers.get('sec-ch-ua') || null;
     const secChUaPlatform = request.headers.get('sec-ch-ua-platform') || null;
     const secChUaMobile = request.headers.get('sec-ch-ua-mobile') || null;
