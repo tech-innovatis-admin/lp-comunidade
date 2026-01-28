@@ -8,7 +8,6 @@ import { queryOne, query, transaction } from '@/lib/db';
 import { isValidFileType, isValidFileSize } from '@/lib/s3';
 import { calculateHash, calculateFileHash, generateSecureToken, isValidCPF, isValidEmail, getClientIP } from '@/lib/utils';
 import { appendRegistrationToSheet } from '@/lib/google-sheets';
-
 /**
  * Envia dados para webhook N8N
  * @param data Dados completos do registro

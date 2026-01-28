@@ -34,14 +34,18 @@ async function getCredentialsFromS3(): Promise<any | null> {
 
   try {
     // Bucket jsoninnovatis está em us-east-2, enquanto outros serviços estão em us-east-1
-    const s3Region = process.env.GOOGLE_CREDENTIALS_S3_REGION || 'us-east-2';
-    const s3Client = new S3Client({
-      region: s3Region,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      },
-    });
+    const s3Region = process.env.GOOGLE_CREDENTIALS_S3_REGION || 'us-east-1';
+
+    // Configuração flexível para suportar IAM Role em Produção
+    const s3Config: any = { region: s3Region };
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      s3Config.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+
+    const s3Client = new S3Client(s3Config);
 
     const command = new GetObjectCommand({
       Bucket: s3Bucket,
@@ -50,7 +54,7 @@ async function getCredentialsFromS3(): Promise<any | null> {
 
     const response = await s3Client.send(command);
     const bodyString = await response.Body?.transformToString();
-    
+
     if (!bodyString) {
       throw new Error('Arquivo JSON vazio no S3');
     }
@@ -97,7 +101,7 @@ async function getGoogleAuth() {
   // Método 3: Variáveis individuais (fallback)
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
+
   if (!serviceAccountEmail || !privateKey) {
     throw new Error('Credenciais não configuradas');
   }
@@ -114,7 +118,7 @@ async function getGoogleAuth() {
  */
 async function getSheetId(auth: any, sheetNameOrId?: string): Promise<string> {
   const sheetId = process.env.GOOGLE_SHEET_ID || sheetNameOrId;
-  
+
   // Se já for um ID (formato típico: letras/números longos), retorna direto
   if (sheetId && /^[a-zA-Z0-9_-]{44}$/.test(sheetId)) {
     return sheetId;
@@ -149,7 +153,7 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
   try {
     // Obtém autenticação
     const auth = await getGoogleAuth();
-    
+
     // Obtém ID da planilha (por ID ou nome)
     const sheetId = await getSheetId(auth, process.env.GOOGLE_SHEET_NAME);
 
@@ -161,11 +165,11 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
     // O Google Sheets automaticamente cria um link clicável quando detecta uma URL válida
     // Solução simples e confiável: inserir URL diretamente (Google Sheets cria link automaticamente)
     const documentCell = registration.document_view_url || 'Armazenado no Banco (PostgreSQL)';
-    
+
     if (registration.document_view_url) {
       console.log(`🔗 Google Sheets: Inserindo URL do documento: ${registration.document_view_url}`);
     }
-    
+
     const values = [
       [
         registration.id,
