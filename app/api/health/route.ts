@@ -32,13 +32,19 @@ export async function GET() {
   // Teste S3 (verifica se credenciais existem)
   try {
     const { S3Client, ListBucketsCommand } = await import('@aws-sdk/client-s3');
-    const s3Client = new S3Client({
+
+    const s3Config: any = {
       region: process.env.AWS_REGION || 'us-east-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      },
-    });
+    };
+
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      s3Config.credentials = {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      };
+    }
+
+    const s3Client = new S3Client(s3Config);
     const result = await s3Client.send(new ListBucketsCommand({}));
     checks.s3 = (result.Buckets?.length || 0) > 0;
   } catch (error) {
