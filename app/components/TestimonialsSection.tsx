@@ -29,24 +29,27 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="relative py-1 px-4">
+    <section className="relative py-24 px-4 bg-[#F8FAFC] border-t border-slate-100 -mt-px" >
       <div className="max-w-6xl mx-auto">
         {/* Título da Seção */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            O Que Nossos <span className="text-[#5EBFED] font-bold">Clientes</span> Dizem
+        <div className="text-center mb-20">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 text-slate-900 tracking-tight">
+            Quem já executa projeto com a <br /><span className="text-[#22AE84]">Innovatis fala por nós</span>
           </h2>
-          <p className="text-gray-300 text-lg font-normal">
+          <p className="text-slate-600 text-lg font-medium max-w-2xl mx-auto">
             Depoimentos reais de quem já transformou seu projeto conosco
           </p>
+          <div className="mt-8 flex justify-center">
+            <div className="h-1.5 w-20 bg-[#5EBFED] rounded-full opacity-20"></div>
+          </div>
         </div>
 
         {/* Grid de Depoimentos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:transform hover:scale-105"
+              className="relative bg-gradient-to-br from-[#121826]/90 to-[#0F172A]/95 backdrop-blur-sm rounded-2xl p-6 border border-[#1E293B] hover:border-[#334155] transition-all duration-300 hover:transform hover:scale-105"
               style={{
                 animation: 'fadeIn 0.6s ease-out forwards',
                 animationDelay: `${0.2 * index}s`,
@@ -99,7 +102,6 @@ export default function TestimonialsSection() {
           ))}
         </div>
       </div>
-    </section>
+    </section >
   )
 }
-

@@ -160,11 +160,11 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
     const sheets = google.sheets({ version: 'v4', auth });
 
     // Prepara os dados para a planilha
-    // Ordem das colunas: ID, Data, Nome, Email, Telefone, CPF, Profissão, Empresa, Endereço, Projetos, Status, Documento
+    // Ordem das colunas: ID, Data, Nome, Email, Telefone, CPF, Profissão, Empresa, Endereço Completo, Projetos, Status, Documento
     // Se houver URL do documento, insere apenas a URL
     // O Google Sheets automaticamente cria um link clicável quando detecta uma URL válida
     // Solução simples e confiável: inserir URL diretamente (Google Sheets cria link automaticamente)
-    const documentCell = registration.document_view_url || 'Armazenado no Banco (PostgreSQL)';
+    const documentCell = registration.document_view_url || 'Nao enviado';
 
     if (registration.document_view_url) {
       console.log(`🔗 Google Sheets: Inserindo URL do documento: ${registration.document_view_url}`);
@@ -217,4 +217,3 @@ export async function appendRegistrationToSheet(registration: RegistrationData) 
     // O dado já está salvo no banco de dados com segurança
   }
 }
-
