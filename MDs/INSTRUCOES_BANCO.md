@@ -1,10 +1,12 @@
 # 🗄️ Instruções para Criar Banco de Dados
 
+> ⚠️ **IMPORTANTE**: Antes de executar qualquer comando, certifique-se de que o arquivo `.env` está configurado com as variáveis de ambiente corretas (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.).
+
 ## Opção 1: Via pgAdmin (Recomendado)
 
 1. **Abra o pgAdmin**
-2. **Conecte ao servidor** `nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com`
-3. **Clique com botão direito** no banco `postgres` (banco padrão)
+2. **Conecte ao servidor**
+3. **Clique com botão direito** no banco `` (banco padrão)
 4. **Selecione**: Query Tool
 5. **Execute o script**: `database/migrations/000_create_database.sql`
 6. **Ou execute diretamente**:
@@ -16,8 +18,8 @@
 
 ```powershell
 # Conecte ao banco postgres
-$env:PGPASSWORD="InnovaLabs86"
-psql -h nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com -U postgres -d postgres -c "CREATE DATABASE landing_page_comunidade;"
+$env:PGPASSWORD="$env:DB_PASSWORD"
+psql -h $env:DB_HOST -U $env:DB_USER -d postgres -c "CREATE DATABASE landing_page_comunidade;"
 ```
 
 ## Opção 3: Via Script TypeScript
@@ -42,7 +44,7 @@ DB_NAME=landing_page_comunidade
 E também atualize o `DATABASE_URL`:
 
 ```env
-DATABASE_URL="postgresql://postgres:InnovaLabs86@nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com:5432/landing_page_comunidade"
+DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME"
 ```
 
 ### 2. Execute as Migrations
