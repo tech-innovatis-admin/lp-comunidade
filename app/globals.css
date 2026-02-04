@@ -78,6 +78,16 @@
   --foreground: #ededed;
   --font-poppins: 'Poppins', system-ui, sans-serif;
   --whatsapp-green: #25D366;
+  
+  /* Redesign Palette */
+  --ice-white: #F8FAFC; /* Soft off-white */
+  --slate-50: #F8FAFC;
+  --slate-100: #F1F5F9;
+  --slate-200: #E2E8F0;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1E293B;
+  --slate-900: #0F172A;
 }
 
 html {
@@ -201,6 +211,24 @@ body {
 /* Classe de perspectiva para o container dos cards */
 .perspective-container {
   perspective: 1000px;
+}
+
+/* Premium Shadows & Elevation */
+.shadow-premium {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-premium-hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.card-white-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-white-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.12);
 }
 
 /* Efeito de reflexo para os cards */

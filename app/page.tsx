@@ -12,19 +12,17 @@ export default function Home() {
     <>
       <Navbar />
       <main className="flex-1 relative z-10">
-        {/* Hero Section */}
         <HeroSection />
 
-        {/* InnovaNation Section */}
         <InnovaNationSection />
 
-        {/* Testimonials Section */}
         <TestimonialsSection />
 
-        {/* Registration Form Section */}
         <RegistrationFormSection />
-
       </main>
+{/* 
+      <CTASection />
+      <WhatsAppButton phoneNumber={whatsappConfig.phoneNumber} message={whatsappConfig.defaultMessage} /> */}
     </>
   );
 }

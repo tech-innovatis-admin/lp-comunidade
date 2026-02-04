@@ -49,7 +49,12 @@ export async function POST(request: NextRequest) {
     const cpf = formData.get('cpf')?.toString() || '';
     const phone = formData.get('phone')?.toString() || '';
     const email = formData.get('email')?.toString() || '';
-    const address = formData.get('address')?.toString() || '';
+    const cep = formData.get('cep')?.toString() || '';
+    const logradouro = formData.get('logradouro')?.toString() || '';
+    const numero = formData.get('numero')?.toString() || '';
+    const bairro = formData.get('bairro')?.toString() || '';
+    const cidade = formData.get('cidade')?.toString() || '';
+    const estado = formData.get('estado')?.toString() || '';
     const projects = formData.get('projects')?.toString() || '';
     const termsId = formData.get('termsId')?.toString();
     const termsVersion = formData.get('termsVersion')?.toString();
@@ -78,34 +83,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!idDocumentFile) {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (!cleanCep || cleanCep.length !== 8) {
       return NextResponse.json(
-        { error: 'Documento de identidade é obrigatório' },
+        { error: 'CEP inválido' },
         { status: 400 }
       );
     }
 
-    // Valida arquivo
-    if (!isValidFileType(idDocumentFile.type)) {
+    if (!logradouro || logradouro.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Tipo de arquivo não permitido. Use JPG, PNG ou PDF' },
+        { error: 'Logradouro é obrigatório' },
         { status: 400 }
       );
     }
 
-    const fileBuffer = Buffer.from(await idDocumentFile.arrayBuffer());
-    if (!isValidFileSize(fileBuffer.length)) {
+    if (!numero || numero.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Arquivo muito grande. Máximo 10MB' },
+        { error: 'Número é obrigatório' },
         { status: 400 }
       );
     }
 
-    // Calcula hash SHA-256 do documento para garantia de integridade jurídica
-    const documentHash = calculateFileHash(fileBuffer);
-    const documentSize = fileBuffer.length;
-    const originalFilename = idDocumentFile.name;
-    const mimeType = idDocumentFile.type;
+    if (!bairro || bairro.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Bairro é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    if (!cidade || cidade.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Cidade é obrigatória' },
+        { status: 400 }
+      );
+    }
+
+    const cleanEstado = estado.trim().toUpperCase();
+    if (!cleanEstado || cleanEstado.length !== 2) {
+      return NextResponse.json(
+        { error: 'Estado inválido' },
+        { status: 400 }
+      );
+    }
+
+    const formattedCep = cleanCep.replace(/(\d{5})(\d{3})/, '$1-$2');
+    const fullAddress = `${logradouro.trim()}, ${numero.trim()} - ${cidade.trim()}, ${bairro.trim()}, ${cleanEstado} - ${formattedCep}`;
+
+    let fileBuffer: Buffer | null = null;
+    let documentHash: string | null = null;
+    let documentSize: number | null = null;
+    let originalFilename: string | null = null;
+    let mimeType: string | null = null;
+
+    if (idDocumentFile) {
+      // Valida arquivo (opcional)
+      if (!isValidFileType(idDocumentFile.type)) {
+        return NextResponse.json(
+          { error: 'Tipo de arquivo n?o permitido. Use JPG, PNG ou PDF' },
+          { status: 400 }
+        );
+      }
+
+      fileBuffer = Buffer.from(await idDocumentFile.arrayBuffer());
+      if (!isValidFileSize(fileBuffer.length)) {
+        return NextResponse.json(
+          { error: 'Arquivo muito grande. M?ximo 10MB' },
+          { status: 400 }
+        );
+      }
+
+      // Calcula hash SHA-256 do documento para garantia de integridade jur?dica
+      documentHash = calculateFileHash(fileBuffer);
+      documentSize = fileBuffer.length;
+      originalFilename = idDocumentFile.name;
+      mimeType = idDocumentFile.type;
+    }
 
     // Obtém IP e User-Agent
     const clientIP = getClientIP(request.headers);
@@ -215,7 +268,13 @@ export async function POST(request: NextRequest) {
       fullName.trim(),
       cleanCpf,
       cleanEmail,
-      documentHash,
+      cleanCep,
+      logradouro.trim(),
+      numero.trim(),
+      bairro.trim(),
+      cidade.trim(),
+      cleanEstado,
+      documentHash || 'no-document',
       activeTerm.content_hash,
       activeTerm.version,
       clientIP,
@@ -245,7 +304,9 @@ export async function POST(request: NextRequest) {
       const registrationResult = await client.query(
         `
           INSERT INTO registrations (
-            full_name, profession, organization, cpf, phone, email, address, projects,
+            full_name, profession, organization, cpf, phone, email, address,
+            address_zip, address_street, address_number, address_neighborhood, address_city, address_state,
+            projects,
             id_document_data, id_document_hash, id_document_size_bytes, 
             id_document_original_filename, id_document_mime_type,
             terms_id, terms_accepted, terms_accepted_at, terms_accepted_ip, terms_user_agent,
@@ -253,7 +314,7 @@ export async function POST(request: NextRequest) {
             accept_language, referer, x_forwarded_for, sec_ch_ua, sec_ch_ua_platform, sec_ch_ua_mobile,
             registration_fingerprint,
             status, variant
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, TRUE, NOW(), $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, 'PENDING', 'MANUAL')
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, TRUE, NOW(), $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, 'PENDING', 'MANUAL')
           RETURNING id
         `,
         [
@@ -263,7 +324,13 @@ export async function POST(request: NextRequest) {
           cleanCpf,
           phone.trim() || null,
           email.trim().toLowerCase(),
-          address.trim() || null,
+          fullAddress.trim() || null,
+          cleanCep,
+          logradouro.trim(),
+          numero.trim(),
+          bairro.trim(),
+          cidade.trim(),
+          cleanEstado,
           projects.trim() || null,
           fileBuffer, // BYTEA - documento armazenado diretamente no PostgreSQL (garantia jurídica)
           documentHash, // SHA-256 para verificação de integridade do documento
@@ -294,7 +361,7 @@ export async function POST(request: NextRequest) {
       // Gera URL permanente para visualização do documento
       // Usa a própria API como fonte (endpoint /api/documents/[id])
       const baseUrl = process.env.PUBLIC_BASE_URL || 'https://comunidade.innovatismc.com';
-      const documentViewUrl = `${baseUrl}/api/documents/${registrationId}`;
+      const documentViewUrl = fileBuffer ? `${baseUrl}/api/documents/${registrationId}` : null;
 
       // Prepara dados completos para Google Sheets e N8N
       const completeData = {
@@ -305,7 +372,13 @@ export async function POST(request: NextRequest) {
         cpf: cleanCpf,
         profession: profession.trim() || '',
         organization: organization.trim() || '',
-        address: address.trim() || '',
+        address: fullAddress.trim() || '',
+        address_zip: cleanCep,
+        address_street: logradouro.trim(),
+        address_number: numero.trim(),
+        address_neighborhood: bairro.trim(),
+        address_city: cidade.trim(),
+        address_state: cleanEstado,
         projects: projects.trim() || '',
         status: 'PENDING',
         document_view_url: documentViewUrl, // URL permanente para visualização na planilha
