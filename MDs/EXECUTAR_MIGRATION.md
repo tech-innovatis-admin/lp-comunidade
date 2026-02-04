@@ -13,11 +13,6 @@ O script automático está tendo problemas ao dividir o SQL. Execute manualmente
 
 ## Opção 2: Via psql (no seu terminal)
 
-```powershell
-$env:PGPASSWORD="InnovaLabs86"
-Get-Content "database\migrations\001_create_tables_simple.sql" | psql -h nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com -U postgres -d landing_page_comunidade
-```
-
 ## Depois de criar as tabelas
 
 Execute para inserir o termo inicial:

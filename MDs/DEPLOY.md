@@ -62,19 +62,19 @@ curl http://localhost:3002/api/health
 cat > /home/ec2-user/landing-comunidade.env << 'EOF'
 NODE_ENV=production
 PORT=3002
-DB_HOST=nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com
+DB_HOST=
 DB_PORT=5432
 DB_NAME=landing_page_comunidade
-DB_USER=postgres
-DB_PASSWORD=InnovaLabs86
+DB_USER=
+DB_PASSWORD=
 DB_SSL=true
-DATABASE_URL=postgresql://postgres:InnovaLabs86@nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com:5432/landing_page_comunidade
+DATABASE_URL=
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=AKIA47GB733YTO5WSIZ2
-AWS_SECRET_ACCESS_KEY=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
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 AWS_S3_BUCKET_NAME=innovanation-documents
-GOOGLE_CREDENTIALS_S3_BUCKET=jsoninnovatis
-GOOGLE_CREDENTIALS_S3_KEY=chave2.json
+GOOGLE_CREDENTIALS_S3_BUCKET=
+GOOGLE_CREDENTIALS_S3_KEY=
 GOOGLE_CREDENTIALS_S3_REGION=us-east-2
 GOOGLE_SHEET_NAME=InnovaNation - Inscrições Comunidade
 PUBLIC_BASE_URL=https://comunidade.innovatismc.com
@@ -216,8 +216,8 @@ sudo certbot certificates
 | Nginx (host) | 80 (HTTP) / 443 (HTTPS) → proxy_pass para `127.0.0.1:3002` |
 | ECR Registry | 891612552945.dkr.ecr.us-east-1.amazonaws.com |
 | Imagem | landing-comunidade-innovatis:latest |
-| RDS Host | nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com |
-| Database | landing_page_comunidade |
+| RDS Host | xxxxxx.ci1kcsyewm34.us-east-1.rds.amazonaws.com |
+| Database | xxxxxxx |
 | S3 Docs | innovanation-documents |
 | S3 Creds | jsoninnovatis |
 | Google Sheet | InnovaNation - Inscrições Comunidade |
