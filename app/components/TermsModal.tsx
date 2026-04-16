@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 
 interface TermsModalProps {
@@ -12,8 +12,75 @@ interface TermsModalProps {
   isLoading?: boolean
 }
 
+const ALLOWED_TAGS = new Set([
+  'P',
+  'BR',
+  'STRONG',
+  'EM',
+  'B',
+  'I',
+  'U',
+  'UL',
+  'OL',
+  'LI',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'H5',
+  'H6',
+  'BLOCKQUOTE'
+])
+
+function sanitizeTermsHtml(rawHtml: string): string {
+  const parser = new DOMParser()
+  const document = parser.parseFromString(rawHtml, 'text/html')
+
+  document
+    .querySelectorAll('script, style, iframe, object, embed, form, input, button, textarea, select, option, link, meta, svg, math')
+    .forEach((element) => element.remove())
+
+  const unwrapElement = (element: Element) => {
+    const parent = element.parentNode
+
+    if (!parent) {
+      element.remove()
+      return
+    }
+
+    while (element.firstChild) {
+      parent.insertBefore(element.firstChild, element)
+    }
+
+    parent.removeChild(element)
+  }
+
+  document.body.querySelectorAll('*').forEach((element) => {
+    if (!ALLOWED_TAGS.has(element.tagName)) {
+      unwrapElement(element)
+      return
+    }
+
+    Array.from(element.attributes).forEach((attribute) => {
+      element.removeAttribute(attribute.name)
+    })
+  })
+
+  return document.body.innerHTML
+}
+
 export default function TermsModal({ isOpen, onClose, onAccept, isAccepted, termsContent, isLoading = false }: TermsModalProps) {
   const [modalAccepted, setModalAccepted] = useState(false)
+  const [safeTermsContent, setSafeTermsContent] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isOpen || !termsContent) {
+      setSafeTermsContent(null)
+      return
+    }
+
+    setSafeTermsContent(sanitizeTermsHtml(termsContent))
+  }, [isOpen, termsContent])
 
   if (!isOpen) return null
 
@@ -52,10 +119,15 @@ export default function TermsModal({ isOpen, onClose, onAccept, isAccepted, term
                 <div className="w-8 h-8 border-4 border-[#25D366] border-t-transparent rounded-full animate-spin"></div>
                 <span className="ml-3 text-gray-600">Carregando termos...</span>
               </div>
-            ) : termsContent ? (
+            ) : termsContent && safeTermsContent === null ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-[#25D366] border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-3 text-gray-600">Validando conteúdo dos termos...</span>
+              </div>
+            ) : safeTermsContent ? (
               <div 
                 className="text-gray-900 space-y-3 font-normal leading-relaxed text-sm"
-                dangerouslySetInnerHTML={{ __html: termsContent }}
+                dangerouslySetInnerHTML={{ __html: safeTermsContent }}
               />
             ) : (
               <div className="text-gray-900 space-y-3 font-normal leading-relaxed text-sm">

@@ -1,0 +1,91 @@
+# Exemplo de hardening para /etc/nginx/conf.d/landing-comunidade.conf
+# Ajuste o server_name e a porta do upstream conforme seu ambiente.
+# Importante: a app já envia CSP dinâmica com nonce. Não sobrescreva CSP aqui.
+
+server {
+    listen 443 ssl http2;
+    server_name comunidade.innovatismc.com;
+
+    access_log /var/log/nginx/comunidade-access.log;
+    error_log  /var/log/nginx/comunidade-error.log warn;
+
+    client_max_body_size 12M;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Cross-Origin-Resource-Policy "same-origin" always;
+
+    limit_req zone=per_ip_general burst=20 nodelay;
+    limit_conn per_ip_conn 20;
+
+    location = /api/inscricoes {
+        limit_req zone=per_ip_form burst=10 nodelay;
+
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
+
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+    }
+
+    location / {
+        if ($request_method !~ ^(GET|HEAD|POST|OPTIONS)$) {
+            return 405;
+        }
+
+        sub_filter off;
+
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_max_temp_file_size 0;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+
+    location ~ /\.(?!well-known).* {
+        return 404;
+    }
+
+    location ~* \.(env|git|svn|hg|bak|old|orig|save|swp|log|sql|sqlite|ini|conf|ya?ml|toml|lock)$ {
+        return 404;
+    }
+
+    ssl_certificate /etc/letsencrypt/live/comunidade.innovatismc.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/comunidade.innovatismc.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    listen 80;
+    server_name comunidade.innovatismc.com;
+    return 301 https://$host$request_uri;
+}

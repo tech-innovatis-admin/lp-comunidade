@@ -1,0 +1,20 @@
+# Coloque este bloco no contexto `http { ... }` do nginx.conf
+# Ex.: /etc/nginx/nginx.conf
+
+server_tokens off;
+ignore_invalid_headers on;
+underscores_in_headers off;
+client_body_timeout 15s;
+client_header_timeout 15s;
+send_timeout 30s;
+keepalive_timeout 20s;
+ssi off;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+limit_req_zone $binary_remote_addr zone=per_ip_general:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=per_ip_form:10m rate=10r/m;
+limit_conn_zone $binary_remote_addr zone=per_ip_conn:10m;

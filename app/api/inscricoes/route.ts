@@ -8,6 +8,33 @@ import { queryOne, query, transaction } from '@/lib/db';
 import { isValidFileType, isValidFileSize } from '@/lib/s3';
 import { calculateHash, calculateFileHash, generateSecureToken, isValidCPF, isValidEmail, getClientIP } from '@/lib/utils';
 import { appendRegistrationToSheet } from '@/lib/google-sheets';
+import {
+  applyNoStore,
+  containsDangerousInput,
+  enforceRateLimit,
+  getContentLength,
+  hasValidFileSignature,
+  isTrustedOrigin,
+} from '@/lib/security';
+
+const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
+const MAX_FIELD_LENGTHS = {
+  fullName: 120,
+  profession: 120,
+  organization: 150,
+  phone: 32,
+  email: 254,
+  logradouro: 180,
+  numero: 20,
+  bairro: 120,
+  cidade: 120,
+  estado: 2,
+  projects: 5000,
+};
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return applyNoStore(NextResponse.json(body, init));
+}
 /**
  * Envia dados para webhook N8N
  * @param data Dados completos do registro
@@ -39,6 +66,43 @@ async function sendToN8NWebhook(data: any) {
 
 export async function POST(request: NextRequest) {
   try {
+    const requestSize = getContentLength(request);
+
+    if (requestSize !== null && requestSize > MAX_REQUEST_BYTES) {
+      return jsonResponse(
+        { error: 'Requisição muito grande' },
+        { status: 413 }
+      );
+    }
+
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
+      return jsonResponse(
+        { error: 'Tipo de requisição inválido' },
+        { status: 415 }
+      );
+    }
+
+    if (!isTrustedOrigin(request)) {
+      return jsonResponse(
+        { error: 'Origem não autorizada' },
+        { status: 403 }
+      );
+    }
+
+    const rateLimit = enforceRateLimit(request, 'registration-submit', 8, 10 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return jsonResponse(
+        { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': rateLimit.retryAfterSeconds.toString(),
+          },
+        }
+      );
+    }
+
     // Parse do FormData
     const formData = await request.formData();
 
@@ -59,25 +123,106 @@ export async function POST(request: NextRequest) {
     const termsId = formData.get('termsId')?.toString();
     const termsVersion = formData.get('termsVersion')?.toString();
     const variant = formData.get('variant')?.toString() || 'MANUAL';
+    const website = formData.get('website')?.toString() || '';
     const idDocumentFile = formData.get('idDocumentFile') as File | null;
+
+    if (website.trim().length > 0) {
+      return jsonResponse({ status: 'ok' });
+    }
+
+    if (variant !== 'MANUAL') {
+      return jsonResponse(
+        { error: 'Variante inválida' },
+        { status: 400 }
+      );
+    }
+
+    const textFields = [
+      fullName,
+      profession,
+      organization,
+      cpf,
+      phone,
+      email,
+      cep,
+      logradouro,
+      numero,
+      bairro,
+      cidade,
+      estado,
+      projects,
+      termsVersion || '',
+      website,
+    ];
+
+    if (textFields.some((value) => containsDangerousInput(value))) {
+      return jsonResponse(
+        { error: 'Conteúdo inválido detectado na requisição' },
+        { status: 400 }
+      );
+    }
+
+    if (fullName.length > MAX_FIELD_LENGTHS.fullName) {
+      return jsonResponse({ error: 'Nome completo excede o limite permitido' }, { status: 400 });
+    }
+
+    if (profession.length > MAX_FIELD_LENGTHS.profession) {
+      return jsonResponse({ error: 'Profissão excede o limite permitido' }, { status: 400 });
+    }
+
+    if (organization.length > MAX_FIELD_LENGTHS.organization) {
+      return jsonResponse({ error: 'Empresa excede o limite permitido' }, { status: 400 });
+    }
+
+    if (phone.length > MAX_FIELD_LENGTHS.phone) {
+      return jsonResponse({ error: 'Telefone excede o limite permitido' }, { status: 400 });
+    }
+
+    if (email.length > MAX_FIELD_LENGTHS.email) {
+      return jsonResponse({ error: 'E-mail excede o limite permitido' }, { status: 400 });
+    }
+
+    if (logradouro.length > MAX_FIELD_LENGTHS.logradouro) {
+      return jsonResponse({ error: 'Logradouro excede o limite permitido' }, { status: 400 });
+    }
+
+    if (numero.length > MAX_FIELD_LENGTHS.numero) {
+      return jsonResponse({ error: 'Número excede o limite permitido' }, { status: 400 });
+    }
+
+    if (bairro.length > MAX_FIELD_LENGTHS.bairro) {
+      return jsonResponse({ error: 'Bairro excede o limite permitido' }, { status: 400 });
+    }
+
+    if (cidade.length > MAX_FIELD_LENGTHS.cidade) {
+      return jsonResponse({ error: 'Cidade excede o limite permitido' }, { status: 400 });
+    }
+
+    if (estado.length > MAX_FIELD_LENGTHS.estado) {
+      return jsonResponse({ error: 'Estado excede o limite permitido' }, { status: 400 });
+    }
+
+    if (projects.length > MAX_FIELD_LENGTHS.projects) {
+      return jsonResponse({ error: 'Projetos excede o limite permitido' }, { status: 400 });
+    }
 
     // Validações básicas
     if (!fullName || fullName.trim().length === 0) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Nome completo é obrigatório' },
         { status: 400 }
       );
     }
 
     if (!cpf || !isValidCPF(cpf)) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'CPF inválido' },
         { status: 400 }
       );
     }
 
     if (!email || !isValidEmail(email)) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'E-mail inválido' },
         { status: 400 }
       );
@@ -85,35 +230,35 @@ export async function POST(request: NextRequest) {
 
     const cleanCep = cep.replace(/\D/g, '');
     if (!cleanCep || cleanCep.length !== 8) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'CEP inválido' },
         { status: 400 }
       );
     }
 
     if (!logradouro || logradouro.trim().length === 0) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Logradouro é obrigatório' },
         { status: 400 }
       );
     }
 
     if (!numero || numero.trim().length === 0) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Número é obrigatório' },
         { status: 400 }
       );
     }
 
     if (!bairro || bairro.trim().length === 0) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Bairro é obrigatório' },
         { status: 400 }
       );
     }
 
     if (!cidade || cidade.trim().length === 0) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Cidade é obrigatória' },
         { status: 400 }
       );
@@ -121,7 +266,7 @@ export async function POST(request: NextRequest) {
 
     const cleanEstado = estado.trim().toUpperCase();
     if (!cleanEstado || cleanEstado.length !== 2) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Estado inválido' },
         { status: 400 }
       );
@@ -139,7 +284,7 @@ export async function POST(request: NextRequest) {
     if (idDocumentFile) {
       // Valida arquivo (opcional)
       if (!isValidFileType(idDocumentFile.type)) {
-        return NextResponse.json(
+        return jsonResponse(
           { error: 'Tipo de arquivo n?o permitido. Use JPG, PNG ou PDF' },
           { status: 400 }
         );
@@ -147,8 +292,15 @@ export async function POST(request: NextRequest) {
 
       fileBuffer = Buffer.from(await idDocumentFile.arrayBuffer());
       if (!isValidFileSize(fileBuffer.length)) {
-        return NextResponse.json(
+        return jsonResponse(
           { error: 'Arquivo muito grande. M?ximo 10MB' },
+          { status: 400 }
+        );
+      }
+
+      if (!hasValidFileSignature(fileBuffer, idDocumentFile.type)) {
+        return jsonResponse(
+          { error: 'Assinatura do arquivo inválida ou incompatível com o tipo informado' },
           { status: 400 }
         );
       }
@@ -156,7 +308,7 @@ export async function POST(request: NextRequest) {
       // Calcula hash SHA-256 do documento para garantia de integridade jur?dica
       documentHash = calculateFileHash(fileBuffer);
       documentSize = fileBuffer.length;
-      originalFilename = idDocumentFile.name;
+      originalFilename = idDocumentFile.name.replace(/[^\w.\-() ]/g, '_').slice(0, 120);
       mimeType = idDocumentFile.type;
     }
 
@@ -202,7 +354,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!activeTerm) {
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Nenhum termo ativo encontrado' },
         { status: 500 }
       );
@@ -212,7 +364,7 @@ export async function POST(request: NextRequest) {
     // Converte para string para comparação segura
     if (termsId && activeTerm.id.toString() !== termsId.toString()) {
       console.error(`Termos ID incompatíveis: Recebido ${termsId}, Ativo ${activeTerm.id}`);
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Termos desatualizados. Por favor, recarregue a página' },
         { status: 400 }
       );
@@ -220,7 +372,7 @@ export async function POST(request: NextRequest) {
 
     if (termsVersion && termsVersion.trim() !== activeTerm.version.trim()) {
       console.error(`Termos Versão incompatíveis: Recebido "${termsVersion}", Ativo "${activeTerm.version}"`);
-      return NextResponse.json(
+      return jsonResponse(
         { error: 'Termos desatualizados. Por favor, recarregue a página' },
         { status: 400 }
       );
@@ -237,7 +389,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (existingEmail) {
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: 'Email já cadastrado',
           message: 'Este endereço de e-mail já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
@@ -253,7 +405,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (existingCpf) {
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: 'CPF já cadastrado',
           message: 'Este CPF já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
@@ -434,12 +586,12 @@ export async function POST(request: NextRequest) {
         .catch(err => console.error('Erro no webhook N8N (não afeta o cadastro):', err));
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       status: 'ok',
     });
   } catch (error) {
     console.error('Erro ao processar inscrição:', error);
-    return NextResponse.json(
+    return jsonResponse(
       { error: 'Erro interno do servidor' },
       { status: 500 }
     );

@@ -5,10 +5,10 @@
 
 import { NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
+import { applyNoStore, containsDangerousHtml } from '@/lib/security';
 
 export async function GET() {
   try {
-    // Busca o termo ativo mais recente
     const term = await queryOne<{
       id: number;
       version: string;
@@ -27,26 +27,33 @@ export async function GET() {
     );
 
     if (!term) {
-      return NextResponse.json(
+      return applyNoStore(NextResponse.json(
         { error: 'Nenhum termo ativo encontrado' },
         { status: 404 }
-      );
+      ));
     }
 
-    return NextResponse.json({
+    if (containsDangerousHtml(term.content)) {
+      console.error('Conteudo de termos bloqueado por conter HTML perigoso.');
+      return applyNoStore(NextResponse.json(
+        { error: 'Conteudo de termos temporariamente indisponivel' },
+        { status: 503 }
+      ));
+    }
+
+    return applyNoStore(NextResponse.json({
       id: term.id,
       version: term.version,
       title: term.title,
-      content_html: term.content, // Pode ser HTML ou texto plano
+      content_html: term.content,
       content_hash: term.content_hash,
       created_at: term.created_at.toISOString(),
-    });
+    }));
   } catch (error) {
     console.error('Erro ao buscar termos ativos:', error);
-    return NextResponse.json(
+    return applyNoStore(NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
-    );
+    ));
   }
 }
-

@@ -39,7 +39,8 @@ export default function RegistrationFormSection() {
     bairro: '',
     cidade: '',
     estado: '',
-    projetos: ''
+    projetos: '',
+    website: ''
   })
 
   const [terms, setTerms] = useState({
@@ -566,6 +567,7 @@ export default function RegistrationFormSection() {
       formDataToSend.append('termsId', activeTerms.id.toString())
       formDataToSend.append('termsVersion', activeTerms.version)
       formDataToSend.append('variant', variant)
+      formDataToSend.append('website', formData.website)
 
       // Envia para API
       await submitRegistration(formDataToSend)
@@ -624,7 +626,8 @@ export default function RegistrationFormSection() {
           bairro: '',
           cidade: '',
           estado: '',
-          projetos: ''
+          projetos: '',
+          website: ''
         })
         setTerms({
           termoAdesao: false
@@ -734,6 +737,18 @@ export default function RegistrationFormSection() {
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-slate-800 shadow-2xl">
+              <div className="hidden" aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  type="text"
+                  id="website"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 {/* Campo Nome Completo */}

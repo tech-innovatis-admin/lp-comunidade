@@ -8,8 +8,15 @@ function calculateHash(content: string): string {
 }
 
 async function updateTermV1_0() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    console.error('DATABASE_URL não definida no ambiente.');
+    process.exit(1);
+  }
+
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:InnovaLabs86@nexus-db-prod.ci1kcsyewm34.us-east-1.rds.amazonaws.com:5432/landing_page_comunidade',
+    connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false }
   });
 
