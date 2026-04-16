@@ -10,8 +10,8 @@ interface WhatsAppButtonProps {
   variant?: 'floating' | 'inline'
 }
 
-export default function WhatsAppButton({ 
-  phoneNumber, 
+export default function WhatsAppButton({
+  phoneNumber,
   message = 'Olá! Gostaria de saber mais informações.',
   className = '',
   variant = 'floating'
@@ -23,6 +23,24 @@ export default function WhatsAppButton({
   }, [])
 
   const handleClick = () => {
+    // Tracking: Clique no WhatsApp
+    if (typeof window !== 'undefined') {
+      // Google Analytics
+      if ((window as any).gtag) {
+        (window as any).gtag('event', 'contact_whatsapp', {
+          whatsapp_number: phoneNumber,
+          location: variant === 'floating' ? 'floating_button' : 'inline_button'
+        });
+      }
+      // Meta Pixel
+      if ((window as any).fbq) {
+        (window as any).fbq('trackCustom', 'contact_whatsapp', {
+          whatsapp_number: phoneNumber,
+          location: variant === 'floating' ? 'floating_button' : 'inline_button'
+        });
+      }
+    }
+
     const encodedMessage = encodeURIComponent(message)
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
     window.open(whatsappUrl, '_blank')

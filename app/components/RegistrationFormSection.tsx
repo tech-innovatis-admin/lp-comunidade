@@ -7,6 +7,24 @@ import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
 import { fetchActiveTerms, submitRegistration, type TermsResponse } from '@/lib/api'
 
+// Helper para eventos do Google Analytics e Meta Pixel
+const trackEvent = (eventName: string, params: Record<string, any> = {}) => {
+  if (typeof window !== 'undefined') {
+    // Google Analytics
+    if ((window as any).gtag) {
+      (window as any).gtag('event', eventName, params);
+    }
+    // Meta Pixel
+    if ((window as any).fbq) {
+      if (eventName === 'generate_lead') {
+        (window as any).fbq('track', 'Lead', params);
+      } else {
+        (window as any).fbq('trackCustom', eventName, params);
+      }
+    }
+  }
+};
+
 export default function RegistrationFormSection() {
   const [formData, setFormData] = useState({
     nomeCompleto: '',
@@ -42,6 +60,7 @@ export default function RegistrationFormSection() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [showDuplicateErrorModal, setShowDuplicateErrorModal] = useState(false)
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('')
+  const [formStarted, setFormStarted] = useState(false)
 
   // Variante fixa: MANUAL
   const variant = 'MANUAL'
@@ -85,6 +104,16 @@ export default function RegistrationFormSection() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+
+    // Tracking: Início do preenchimento do formulário
+    if (!formStarted) {
+      setFormStarted(true);
+      trackEvent('form_start', {
+        form_id: 'registration_form',
+        form_name: 'Inscrição InnovaNation'
+      });
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -115,6 +144,9 @@ export default function RegistrationFormSection() {
 
   const handleOpenModal = () => {
     setIsModalOpen(true)
+    trackEvent('view_terms', {
+      terms_type: 'adesão_compromisso'
+    });
   }
 
   const handleCloseModal = () => {
@@ -375,6 +407,15 @@ export default function RegistrationFormSection() {
     }
 
     setErrors(newErrors)
+
+    // Tracking: Erros de validação
+    if (Object.keys(newErrors).length > 0) {
+      trackEvent('form_error', {
+        form_id: 'registration_form',
+        error_fields: Object.keys(newErrors).join(', ')
+      });
+    }
+
     return Object.keys(newErrors).length === 0
   }
 
@@ -462,6 +503,10 @@ export default function RegistrationFormSection() {
   const handleAttemptSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    trackEvent('submit_attempt', {
+      form_id: 'registration_form'
+    });
+
     // Se estiver enviando, não fazer nada
     if (isSubmitting) {
       return
@@ -525,6 +570,16 @@ export default function RegistrationFormSection() {
       // Envia para API
       await submitRegistration(formDataToSend)
 
+      // Tracking: Lead gerado com sucesso
+      trackEvent('generate_lead', {
+        value: 1.0, // Valor simbólico de lead
+        currency: 'BRL',
+        profession: formData.profissao,
+        organization: formData.empresa,
+        city: formData.cidade,
+        state: formData.estado
+      });
+
       setIsSubmitting(false)
 
       // Mostra a mensagem de sucesso (o useEffect vai bloquear o scroll)
@@ -585,6 +640,10 @@ export default function RegistrationFormSection() {
       if (error.status === 409) {
         setDuplicateErrorMessage(error.message || 'Email ou CPF já cadastrado.')
         setShowDuplicateErrorModal(true)
+
+        trackEvent('duplicate_error', {
+          error_message: error.message || 'Email ou CPF já cadastrado'
+        });
       } else {
         setErrors(prev => ({
           ...prev,
