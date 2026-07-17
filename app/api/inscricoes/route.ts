@@ -13,7 +13,12 @@ import { appendRegistrationToSheet } from '@/lib/google-sheets';
  * @param data Dados completos do registro
  */
 async function sendToN8NWebhook(data: any) {
-  const webhookUrl = 'https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade';
+  const webhookUrl = process.env.WEBHOOK_N8N_URL;
+
+  if (!webhookUrl) {
+    console.warn('WEBHOOK_N8N_URL não configurada. Ignorando envio ao N8N.');
+    return false;
+  }
 
   try {
     const response = await fetch(webhookUrl, {
@@ -39,6 +44,7 @@ async function sendToN8NWebhook(data: any) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[inscricoes] Iniciando processamento da inscrição');
     // Parse do FormData
     const formData = await request.formData();
 
@@ -60,6 +66,16 @@ export async function POST(request: NextRequest) {
     const termsVersion = formData.get('termsVersion')?.toString();
     const variant = formData.get('variant')?.toString() || 'MANUAL';
     const idDocumentFile = formData.get('idDocumentFile') as File | null;
+    console.log('[inscricoes] FormData parseado', {
+      hasFullName: !!fullName,
+      hasCpf: !!cpf,
+      hasEmail: !!email,
+      hasCep: !!cep,
+      hasAddress: !!logradouro,
+      hasTermsId: !!termsId,
+      hasTermsVersion: !!termsVersion,
+      hasDocument: !!idDocumentFile,
+    });
 
     // Validações básicas
     if (!fullName || fullName.trim().length === 0) {
@@ -207,6 +223,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    console.log('[inscricoes] Termo ativo encontrado', {
+      id: activeTerm.id,
+      version: activeTerm.version,
+    });
 
     // Valida consistência dos termos
     // Converte para string para comparação segura
@@ -229,37 +249,41 @@ export async function POST(request: NextRequest) {
     // Verifica duplicatas (email e CPF únicos)
     const cleanCpf = cpf.replace(/\D/g, '');
     const cleanEmail = email.trim().toLowerCase();
+    const bypassDuplicateChecks = process.env.BYPASS_DUPLICATE_CHECKS === 'true';
+    console.log('[inscricoes] BYPASS_DUPLICATE_CHECKS', bypassDuplicateChecks);
 
-    // Verifica se email já existe
-    const existingEmail = await queryOne<{ id: number }>(
-      'SELECT id FROM registrations WHERE email = $1 LIMIT 1',
-      [cleanEmail]
-    );
-
-    if (existingEmail) {
-      return NextResponse.json(
-        {
-          error: 'Email já cadastrado',
-          message: 'Este endereço de e-mail já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
-        },
-        { status: 409 }
+    if (!bypassDuplicateChecks) {
+      // Verifica se email já existe
+      const existingEmail = await queryOne<{ id: number }>(
+        'SELECT id FROM registrations WHERE email = $1 LIMIT 1',
+        [cleanEmail]
       );
-    }
 
-    // Verifica se CPF já existe
-    const existingCpf = await queryOne<{ id: number }>(
-      'SELECT id FROM registrations WHERE cpf = $1 LIMIT 1',
-      [cleanCpf]
-    );
+      if (existingEmail) {
+        return NextResponse.json(
+          {
+            error: 'Email já cadastrado',
+            message: 'Este endereço de e-mail já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
+          },
+          { status: 409 }
+        );
+      }
 
-    if (existingCpf) {
-      return NextResponse.json(
-        {
-          error: 'CPF já cadastrado',
-          message: 'Este CPF já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
-        },
-        { status: 409 }
+      // Verifica se CPF já existe
+      const existingCpf = await queryOne<{ id: number }>(
+        'SELECT id FROM registrations WHERE cpf = $1 LIMIT 1',
+        [cleanCpf]
       );
+
+      if (existingCpf) {
+        return NextResponse.json(
+          {
+            error: 'CPF já cadastrado',
+            message: 'Este CPF já foi utilizado para uma inscrição. Cada pessoa pode fazer apenas uma inscrição.'
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Calcula fingerprint do registro (hash de todos os dados críticos)
@@ -289,6 +313,7 @@ export async function POST(request: NextRequest) {
     // - Hash SHA-256 para verificação de integridade
     // - Impossível perder arquivo sem perder registro
     const result = await transaction(async (client) => {
+      console.log('[inscricoes] Iniciando transação de inserção');
       // Insere inscrição com documento armazenado diretamente no banco
       // REGISTRO JURÍDICO COMPLETO:
       // - Documento de identidade (BYTEA)
@@ -351,6 +376,9 @@ export async function POST(request: NextRequest) {
           registrationFingerprint, // Hash de integridade de todo o registro
         ]
       );
+      console.log('[inscricoes] Inserção concluída', {
+        registrationId: registrationResult.rows[0]?.id,
+      });
 
       const registrationId = registrationResult.rows[0].id;
 
@@ -407,6 +435,9 @@ export async function POST(request: NextRequest) {
         registrationData: completeData
       };
     });
+    console.log('[inscricoes] Transação finalizada', {
+      registrationId: result.registrationId,
+    });
 
     // Executa integrações após sucesso no banco (fora da transação)
     if (result.registrationData) {
@@ -439,6 +470,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Erro ao processar inscrição:', error);
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+    }
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
