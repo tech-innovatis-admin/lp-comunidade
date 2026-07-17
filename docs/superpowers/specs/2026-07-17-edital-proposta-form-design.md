@@ -1,7 +1,8 @@
 # Formulário de submissão da proposta — Edital PPI
 
 **Data:** 2026-07-17
-**Status:** Aprovado para plano de implementação
+**Status:** Aprovado. Plano de implementação em andamento — ver "Progresso do plano de
+implementação" no final deste documento antes de continuar.
 
 ## Contexto
 
@@ -267,3 +268,78 @@ perder nada) além de "Avançar".
   de Compromisso de Contrapartida) — ficam como upload manual de PDF assinado.
 - Múltiplas propostas por pessoa/CPF.
 - Limpeza de objetos órfãos no S3 após substituição de documento.
+
+## Progresso do plano de implementação (retomar a partir daqui)
+
+**Decisão de divisão:** o usuário aprovou quebrar a implementação em **2 planos**
+separados (não 1 plano com todas as tarefas):
+- **Plano 1 — Backend/API**: migrações + todos os endpoints de
+  `/api/editais/proposta/*`, testável inteiramente via curl, sem depender do front.
+- **Plano 2 — Frontend**: o wizard de 6 telas (`/edital/proposta`), consumindo a API do
+  Plano 1.
+
+Nenhum arquivo de plano (`docs/superpowers/plans/...`) foi escrito ainda — a sessão foi
+interrompida durante a pesquisa de contexto para o **Plano 1**. As decisões abaixo já
+foram tomadas e devem ser usadas ao escrever o Plano 1; não é necessário re-pesquisar.
+
+### Estrutura de tarefas decidida para o Plano 1
+
+1. **Task 1 — Migração + rascunho (POST/GET)**: cria `edital_submissions` e
+   `edital_submission_documents` (migration `009_...`), endpoints de salvar/retomar
+   rascunho. Sem S3, sem PDF — testável via curl isoladamente.
+2. **Task 2 — Upload de documentos**: novo módulo `lib/edital-requirements.ts` (lista
+   compartilhada de `requirementCode`s + validação), endpoints
+   `POST/GET/DELETE /api/editais/proposta/documento[/:id]`, extensão de `lib/s3.ts`.
+3. **Task 3 — Geração do PDF do Termo de Participação**: novo módulo `lib/edital-pdf.ts`
+   usando `pdf-lib` (nova dependência). Testável isoladamente com um script manual
+   (mesmo padrão de `scripts/test-edital-token.ts`), sem precisar da API.
+4. **Task 4 — Envio final**: endpoint `POST /api/editais/proposta/enviar` — valida
+   completude (usa a lista de `lib/edital-requirements.ts` da Task 2), gera o PDF (Task
+   3), marca `SUBMITTED`, dispara Sheets (`lib/google-sheets.ts`, nova função) + webhook
+   n8n.
+
+### Descobertas técnicas já levantadas (não re-pesquisar)
+
+- **Migrações:** a última é `008_*.sql`. A próxima é `009_create_edital_submissions.sql`.
+  `run-migration.js` **não** roda todos os arquivos automaticamente — tem um array
+  hardcoded de arquivos a executar (diferente de `scripts/migrate.sh`, que faz glob de
+  `database/migrations/*.sql`). É preciso **adicionar o novo arquivo a esse array** em
+  `run-migration.js`, senão a migration nunca roda via `npm run migrate`.
+- **`update_updated_at_column()`** já existe (criada em `001_create_tables_simple.sql`)
+  e pode/deve ser reaproveitada via `CREATE TRIGGER` na tabela nova, em vez de duplicar
+  lógica de `updated_at`.
+- **`lib/s3.ts`:** `uploadFile(file, fileName, mimeType)` hoje **não é usado em nenhum
+  lugar do código** (confirmado via grep) e tem o prefixo `documents/` hardcoded. Seguro
+  estender com um 4º parâmetro opcional `keyPrefix: string = 'documents'` sem quebrar
+  nada — não precisa criar uma função nova do zero.
+- **Draft (`rascunho`) deve usar UPSERT explícito por etapa**, não um SQL dinâmico
+  genérico: três `INSERT ... ON CONFLICT (registration_id) DO UPDATE SET <só as colunas
+  daquela etapa>` (uma para `equipe`, uma para `instituicao`, uma para `proposta`).
+  Um único UPSERT tocando todas as colunas de uma vez sobrescreveria com `NULL` os dados
+  salvos por outras etapas — **não fazer isso**.
+- **Validação de completude fica só no endpoint `enviar`**. O endpoint `rascunho` só
+  valida formato/tamanho/`containsDangerousInput` do que foi enviado; não exige nenhum
+  campo como obrigatório (permite salvar parcialmente/vazio a qualquer momento).
+- **`lib/google-sheets.ts`:** já tem `getGoogleAuth()` e `getSheetId()` reutilizáveis
+  (funções não exportadas, mas no mesmo arquivo). Para a Task 4, adicionar uma nova
+  função exportada `appendEditalSubmissionToSheet(...)` nesse mesmo arquivo, reaproveitando
+  essas duas, apontando para uma aba nova (ex: `'Propostas!A:N'`, com fallback pra aba
+  padrão se não existir — mesmo padrão de try/catch já usado em
+  `appendRegistrationToSheet`).
+- **Download de documento** (`GET /api/editais/proposta/documento/:id`) deve devolver
+  `{ ok: true, url: <signed url> }` em JSON (usando `getSignedFileUrl` de `lib/s3.ts`),
+  não fazer proxy/stream do arquivo através do Next.js — mais simples e consistente com
+  o campo `document_view_url` já usado no fluxo de inscrição.
+- Convenção de rota dinâmica confirmada em `app/api/documents/[id]/route.ts`:
+  `{ params }: { params: Promise<{ id: string }> }` (Next.js 15, params é uma Promise).
+- Upload multipart: seguir o padrão de `app/api/inscricoes/route.ts` linhas ~296-329
+  (`formData.get('file') as File`, `Buffer.from(await file.arrayBuffer())`,
+  `isValidFileType`/`isValidFileSize`/`hasValidFileSignature` antes de aceitar, hash
+  SHA-256 via `calculateFileHash`).
+
+### Próximo passo ao retomar
+
+Escrever o arquivo `docs/superpowers/plans/YYYY-MM-DD-edital-proposta-backend-plan.md`
+(Plano 1) seguindo a skill `superpowers:writing-plans`, usando a estrutura de tarefas e
+descobertas acima — sem precisar re-explorar o código. Depois do Plano 1 aprovado e
+implementado, brainstormar/planejar o Plano 2 (frontend) separadamente.
