@@ -37,6 +37,7 @@ services:
       - GOOGLE_SHEET_NAME=${GOOGLE_SHEET_NAME}
       # URL pública
       - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://comunidade.innovatismc.com}
+      - EDITAL_TOKEN_SECRET=${EDITAL_TOKEN_SECRET}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/api/health"]
       interval: 30s
