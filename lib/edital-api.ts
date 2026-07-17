@@ -42,11 +42,11 @@ export class EditalValidationError extends Error {
   }
 }
 
-export async function validateCpfForEdital(cpf: string): Promise<EditalValidationSuccess> {
+export async function validateCpfForEdital(cpf: string, website: string = ''): Promise<EditalValidationSuccess> {
   const response = await fetch('/api/editais/validar-cpf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cpf, website: '' }),
+    body: JSON.stringify({ cpf, website }),
   });
 
   if (response.status === 404) {

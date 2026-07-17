@@ -37,7 +37,7 @@ export default function EditalCpfGate() {
     setState('validating')
 
     try {
-      const result = await validateCpfForEdital(cpf)
+      const result = await validateCpfForEdital(cpf, website)
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, prefill: result.prefill }))
       setWelcomeName(result.prefill.fullName)
       setState('granted')
