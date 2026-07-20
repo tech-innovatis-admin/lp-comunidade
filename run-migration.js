@@ -18,7 +18,8 @@ const pool = new Pool({
   try {
     const migrations = [
       'database/migrations/008_add_extra_legal_fields.sql',
-      'database/migrations/008_add_address_fields.sql'
+      'database/migrations/008_add_address_fields.sql',
+      'database/migrations/009_create_edital_submissions.sql'
     ];
 
     for (const file of migrations) {
