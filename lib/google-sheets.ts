@@ -149,6 +149,85 @@ async function getSheetId(auth: any, sheetNameOrId?: string): Promise<string> {
   throw new Error('GOOGLE_SHEET_ID ou nome da planilha não configurado');
 }
 
+interface EditalSubmissionData {
+  id: number;
+  registrationId: number;
+  status: 'DRAFT' | 'SUBMITTED';
+  fullName: string;
+  cpf: string;
+  institutionName: string | null;
+  institutionCnpj: string | null;
+  labName: string | null;
+  labArea: string | null;
+  teamDescription: string | null;
+  technicalJustification: string | null;
+  expectedResults: string | null;
+  submittedAt: string;
+}
+
+export async function appendEditalSubmissionToSheet(submission: EditalSubmissionData) {
+  try {
+    // Obtém autenticação
+    const auth = await getGoogleAuth();
+
+    // Obtém ID da planilha (por ID ou nome)
+    const sheetId = await getSheetId(auth, process.env.GOOGLE_SHEET_NAME);
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Ordem das colunas: ID, Data de exportação, ID da Inscrição, Status, Nome, CPF,
+    // Instituição, CNPJ, Laboratório, Área do Laboratório, Descrição da Equipe,
+    // Justificativa Técnica, Resultados Esperados, Data de Envio
+    const values = [
+      [
+        submission.id,
+        new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+        submission.registrationId,
+        submission.status,
+        submission.fullName,
+        submission.cpf,
+        submission.institutionName || '',
+        submission.institutionCnpj || '',
+        submission.labName || '',
+        submission.labArea || '',
+        submission.teamDescription || '',
+        submission.technicalJustification || '',
+        submission.expectedResults || '',
+        submission.submittedAt,
+      ],
+    ];
+
+    // Tenta adicionar na aba "Propostas". Se falhar, tenta na primeira aba.
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'Propostas!A:N',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values,
+        },
+      });
+    } catch (sheetError: any) {
+      // Se der erro de range (aba não existe), tenta sem especificar aba (vai na primeira)
+      console.warn('⚠️ Google Sheets: Aba "Propostas" não encontrada, tentando na aba padrão.');
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'A:N',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values,
+        },
+      });
+    }
+
+    console.log(`✅ Google Sheets: Proposta do Edital #${submission.id} exportada com sucesso.`);
+  } catch (error) {
+    console.error('❌ Google Sheets: Erro ao exportar proposta do Edital:', error);
+    // Não lançamos o erro para não prejudicar a experiência do usuário
+    // O dado já está salvo no banco de dados com segurança
+  }
+}
+
 export async function appendRegistrationToSheet(registration: RegistrationData) {
   try {
     // Obtém autenticação
