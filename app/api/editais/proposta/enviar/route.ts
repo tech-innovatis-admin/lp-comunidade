@@ -3,7 +3,7 @@ import { query, queryOne, transaction } from '@/lib/db';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
 import { generateParticipationTermPdf } from '@/lib/edital-pdf';
-import { uploadFile } from '@/lib/s3';
+import { getSignedFileUrl, uploadFile } from '@/lib/s3';
 import { calculateFileHash } from '@/lib/utils';
 import { appendEditalSubmissionToSheet } from '@/lib/google-sheets';
 import {
@@ -327,14 +327,19 @@ export async function POST(request: NextRequest) {
 
     const webhookUrl = process.env.WEBHOOK_N8N_URL;
     if (webhookUrl) {
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...sheetPayload,
-          termDocumentUrl: upload.url,
-        }),
-      }).catch((error) => {
+      (async () => {
+        const termDocumentSignedUrl = await getSignedFileUrl(upload.filePath, 900);
+
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...sheetPayload,
+            source: 'edital-proposta',
+            termDocumentSignedUrl,
+          }),
+        });
+      })().catch((error) => {
         console.error('Erro no webhook N8N (não afeta a submissão):', error);
       });
     } else {
