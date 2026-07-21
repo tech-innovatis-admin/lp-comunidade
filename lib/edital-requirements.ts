@@ -1,3 +1,7 @@
+// 8.1.8 (registro fotográfico do laboratório) não entra nesta lista: é satisfeito
+// pela contagem mínima de fotos com EDITAL_PHOTO_DOCUMENT_CODE ('foto'), nunca por
+// um documento único com esse código literal — incluí-lo aqui tornaria o item
+// permanentemente impossível de satisfazer em POST /enviar.
 export const EDITAL_REQUIRED_DOCUMENT_CODES = [
   '8.1.1',
   '8.1.2',
@@ -6,7 +10,6 @@ export const EDITAL_REQUIRED_DOCUMENT_CODES = [
   '8.1.5',
   '8.1.6',
   '8.1.7',
-  '8.1.8',
   '8.1.9',
   '8.1.15',
   '8.1.16',
