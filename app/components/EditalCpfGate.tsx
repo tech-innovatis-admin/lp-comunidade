@@ -4,10 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { validateCpfForEdital, EditalValidationError } from '@/lib/edital-api'
+import { setEditalSession } from '@/lib/edital-session'
 
 type GateState = 'idle' | 'validating' | 'blocked' | 'granted'
-
-const SESSION_KEY = 'edital_session'
 
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')
@@ -38,7 +37,7 @@ export default function EditalCpfGate() {
 
     try {
       const result = await validateCpfForEdital(cpf, website)
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, prefill: result.prefill }))
+      setEditalSession({ token: result.token, prefill: result.prefill })
       setWelcomeName(result.prefill.fullName)
       setState('granted')
     } catch (error) {
