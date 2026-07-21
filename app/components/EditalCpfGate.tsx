@@ -4,10 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { validateCpfForEdital, EditalValidationError } from '@/lib/edital-api'
+import { setEditalSession } from '@/lib/edital-session'
 
 type GateState = 'idle' | 'validating' | 'blocked' | 'granted'
-
-const SESSION_KEY = 'edital_session'
 
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')
@@ -38,7 +37,7 @@ export default function EditalCpfGate() {
 
     try {
       const result = await validateCpfForEdital(cpf, website)
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, prefill: result.prefill }))
+      setEditalSession({ token: result.token, prefill: result.prefill })
       setWelcomeName(result.prefill.fullName)
       setState('granted')
     } catch (error) {
@@ -102,16 +101,15 @@ export default function EditalCpfGate() {
           Bem-vindo(a), {welcomeName}!
         </h2>
         <p className="text-slate-300 mb-8">
-          Seu cadastro na comunidade InnovaNation foi confirmado. As próximas etapas do
-          formulário do Edital PPI estarão disponíveis em breve.
+          Seu cadastro na comunidade InnovaNation foi confirmado. Continue para preencher
+          o formulário de submissão da proposta ao Edital PPI.
         </p>
-        <button
-          type="button"
-          disabled
-          className="px-6 py-4 bg-slate-700 text-slate-400 rounded-2xl font-bold cursor-not-allowed"
+        <Link
+          href="/edital/proposta"
+          className="block w-full px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
         >
           Continuar
-        </button>
+        </Link>
       </div>
     )
   }
