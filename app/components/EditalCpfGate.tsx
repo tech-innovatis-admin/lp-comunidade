@@ -52,7 +52,7 @@ export default function EditalCpfGate() {
       } else if (error instanceof EditalValidationError && error.reason === 'invalid_cpf') {
         setErrorMessage('CPF inválido. Confira os números e tente novamente.')
       } else {
-        setErrorMessage('Não foi possível validar seu CPF agora. Tente novamente em instantes.')
+        setErrorMessage('Não foi possível validar seu CPF agora. Tente novamente daqui a pouco.')
       }
       setState('idle')
     }
