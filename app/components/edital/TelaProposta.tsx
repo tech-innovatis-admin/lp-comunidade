@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { EditalBudgetItem } from '@/lib/edital-proposta-api'
 import {
@@ -32,6 +33,24 @@ export default function TelaProposta({
   expectedResults,
   onExpectedResultsChange,
 }: TelaPropostaProps) {
+  const [valorDrafts, setValorDrafts] = useState<Record<number, string>>({})
+
+  const handleValorChange = (index: number, raw: string) => {
+    if (!/^\d*\.?\d*$/.test(raw)) {
+      return
+    }
+    setValorDrafts((prev) => ({ ...prev, [index]: raw }))
+    const parsed = Number.parseFloat(raw)
+    updateItem(index, 'valor_estimado', Number.isNaN(parsed) ? 0 : parsed)
+  }
+
+  const getValorDisplay = (index: number, item: EditalBudgetItem): string => {
+    if (valorDrafts[index] !== undefined) {
+      return valorDrafts[index]
+    }
+    return item.valor_estimado === 0 ? '' : String(item.valor_estimado)
+  }
+
   const updateItem = (index: number, field: keyof EditalBudgetItem, value: string | number) => {
     const next = budgetItems.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     onBudgetItemsChange(next)
@@ -44,6 +63,7 @@ export default function TelaProposta({
 
   const removeItem = (index: number) => {
     onBudgetItemsChange(budgetItems.filter((_, i) => i !== index))
+    setValorDrafts({})
   }
 
   return (
@@ -96,11 +116,10 @@ export default function TelaProposta({
               className={inputClass}
             />
             <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={item.valor_estimado || ''}
-              onChange={(e) => updateItem(index, 'valor_estimado', Number.parseFloat(e.target.value) || 0)}
+              type="text"
+              inputMode="decimal"
+              value={getValorDisplay(index, item)}
+              onChange={(e) => handleValorChange(index, e.target.value)}
               placeholder="Valor estimado (R$)"
               className={inputClass}
             />
