@@ -101,16 +101,15 @@ export default function EditalCpfGate() {
           Bem-vindo(a), {welcomeName}!
         </h2>
         <p className="text-slate-300 mb-8">
-          Seu cadastro na comunidade InnovaNation foi confirmado. As próximas etapas do
-          formulário do Edital PPI estarão disponíveis em breve.
+          Seu cadastro na comunidade InnovaNation foi confirmado. Continue para preencher
+          o formulário de submissão da proposta ao Edital PPI.
         </p>
-        <button
-          type="button"
-          disabled
-          className="px-6 py-4 bg-slate-700 text-slate-400 rounded-2xl font-bold cursor-not-allowed"
+        <Link
+          href="/edital/proposta"
+          className="block w-full px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
         >
           Continuar
-        </button>
+        </Link>
       </div>
     )
   }
