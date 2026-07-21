@@ -103,9 +103,16 @@ Botão "Enviar proposta" (Tela 6) chama `POST /enviar`:
 ## Tela 6 — Revisão: nível de detalhe
 
 Checklist de completude por item obrigatório (não um resumo com prévia de conteúdo):
-cada um dos ~18 itens (11 códigos de documento obrigatórios — `8.1.1`–`8.1.9`,
-`8.1.15`, `8.1.16` — + mínimo de fotos + os 6 campos de texto obrigatórios) aparece com
-um indicador ✓/✗, e cada item é um link que
+cada um dos ~17 itens (10 códigos de documento obrigatórios — `8.1.1`–`8.1.7`,
+`8.1.9`, `8.1.15`, `8.1.16` — + mínimo de fotos + os 6 campos de texto obrigatórios)
+aparece com um indicador ✓/✗, e cada item é um link que
+
+> **Nota (2026-07-21):** `8.1.8` (registro fotográfico) não é um código de documento
+> separado — é coberto pela contagem mínima de fotos (`EDITAL_PHOTO_DOCUMENT_CODE`/
+> `'foto'`). Um bug no backend já mergeado incluía `'8.1.8'` na lista de códigos
+> obrigatórios, o que o tornava permanentemente insatisfazível (nenhuma rota grava um
+> documento com esse código literal); corrigido em `feature/edital-proposta-envio`
+> antes deste plano ser escrito.
 volta para a tela onde ele é preenchido. Não reexibe o texto digitado nos campos —
 apenas confirma presença/ausência. A mesma tela serve de tela de confirmação
 somente-leitura pós-envio (ver "Fluxo de dados" acima), só que sem os links de edição
