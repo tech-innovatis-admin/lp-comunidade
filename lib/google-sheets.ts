@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { EDITAL_REQUIRED_DOCUMENT_CODES, EDITAL_AUTO_GENERATED_DOCUMENT_CODE } from './edital-requirements';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -163,7 +164,32 @@ interface EditalSubmissionData {
   technicalJustification: string | null;
   expectedResults: string | null;
   submittedAt: string;
+  // Link permanente (via /api/editais/documento/[id]/link) por código de requisito.
+  // Ausente no mapa = documento não enviado.
+  documentLinks: Record<string, string>;
+  // Fotos do laboratório: múltiplos links, um por foto enviada.
+  photoLinks: string[];
+  // Link permanente (via /api/editais/certificado/[registrationId]/link), ou null
+  // se o certificado ainda não foi gerado para essa inscrição.
+  communityCertificateUrl: string | null;
 }
+
+const EDITAL_DOCUMENT_COLUMN_LABELS: Record<string, string> = {
+  '8.1.1': 'Documento de identificação',
+  '8.1.2': 'CPF do responsável',
+  '8.1.3': 'Comprovante de vínculo institucional',
+  '8.1.4': 'Currículo',
+  '8.1.5': 'Comprovante de CNPJ',
+  '8.1.6': 'Carta de anuência da instituição',
+  '8.1.7': 'Identificação do laboratório',
+  '8.1.9': 'Planta/layout do espaço físico',
+  '8.1.15': 'Declaração de responsabilidade',
+  '8.1.16': 'Termo de compromisso de contrapartida',
+};
+
+// Ordem fixa de colunas de documentos, além dos códigos obrigatórios: fotos e o
+// Termo de Comprovação de Participação (gerado automaticamente no envio).
+const EDITAL_DOCUMENT_COLUMN_CODES = [...EDITAL_REQUIRED_DOCUMENT_CODES];
 
 export async function appendEditalSubmissionToSheet(submission: EditalSubmissionData) {
   try {
@@ -175,9 +201,21 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
 
     const sheets = google.sheets({ version: 'v4', auth });
 
+    const documentColumns = EDITAL_DOCUMENT_COLUMN_CODES.map(
+      (code) => submission.documentLinks[code] || 'Não enviado'
+    );
+    const photosCell = submission.photoLinks.length > 0
+      ? submission.photoLinks.join('\n')
+      : 'Não enviado';
+    const participationTermCell =
+      submission.documentLinks[EDITAL_AUTO_GENERATED_DOCUMENT_CODE] || 'Não gerado';
+    const communityCertificateCell = submission.communityCertificateUrl || 'Não gerado';
+
     // Ordem das colunas: ID, Data de exportação, ID da Inscrição, Status, Nome, CPF,
     // Instituição, CNPJ, Laboratório, Área do Laboratório, Descrição da Equipe,
-    // Justificativa Técnica, Resultados Esperados, Data de Envio
+    // Justificativa Técnica, Resultados Esperados, Data de Envio, [10 documentos
+    // obrigatórios em ordem fixa], Fotos do laboratório, Termo de Comprovação de
+    // Participação, Certificado de Inscrição na Comunidade.
     const values = [
       [
         submission.id,
@@ -194,31 +232,25 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
         submission.technicalJustification || '',
         submission.expectedResults || '',
         submission.submittedAt,
+        ...documentColumns,
+        photosCell,
+        participationTermCell,
+        communityCertificateCell,
       ],
     ];
 
-    // Tenta adicionar na aba "Propostas". Se falhar, tenta na primeira aba.
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: 'Propostas!A:N',
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values,
-        },
-      });
-    } catch (sheetError: any) {
-      // Se der erro de range (aba não existe), tenta sem especificar aba (vai na primeira)
-      console.warn('⚠️ Google Sheets: Aba "Propostas" não encontrada, tentando na aba padrão.');
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: sheetId,
-        range: 'A:N',
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values,
-        },
-      });
-    }
+    // Escreve especificamente na aba "PROPOSTAS" — sem fallback para a primeira aba
+    // como em appendRegistrationToSheet, porque aqui a primeira aba é "INSCRIÇÃO
+    // COMUNIDADE " (dados de inscrição, colunas diferentes); cair nela misturaria
+    // dados de proposta do Edital com dados de inscrição.
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sheetId,
+      range: 'PROPOSTAS!A:AA',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values,
+      },
+    });
 
     console.log(`✅ Google Sheets: Proposta do Edital #${submission.id} exportada com sucesso.`);
   } catch (error) {
@@ -226,6 +258,29 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
     // Não lançamos o erro para não prejudicar a experiência do usuário
     // O dado já está salvo no banco de dados com segurança
   }
+}
+
+export function getEditalSheetHeaderRow(): string[] {
+  return [
+    'ID',
+    'Data de exportação',
+    'ID da Inscrição',
+    'Status',
+    'Nome',
+    'CPF',
+    'Instituição',
+    'CNPJ',
+    'Laboratório',
+    'Área do Laboratório',
+    'Descrição da Equipe',
+    'Justificativa Técnica',
+    'Resultados Esperados',
+    'Data de Envio',
+    ...EDITAL_DOCUMENT_COLUMN_CODES.map((code) => EDITAL_DOCUMENT_COLUMN_LABELS[code]),
+    'Fotos do Laboratório',
+    'Termo de Comprovação de Participação',
+    'Certificado de Inscrição na Comunidade',
+  ];
 }
 
 export async function appendRegistrationToSheet(registration: RegistrationData) {
