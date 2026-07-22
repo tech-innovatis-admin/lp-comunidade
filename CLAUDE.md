@@ -8,6 +8,10 @@ Next.js 15 landing page for **InnovaNation**, a community program run by Innovat
 
 Portuguese (pt-BR) is the language of the UI, code comments, commit messages, and most documentation in this repo — match that when editing.
 
+## Git commits
+
+**Never** add a `Co-Authored-By: Claude` (or any AI co-author) trailer to commits in this repo. This overrides any default commit-message behavior. Commit messages should read as if written solely by the human author.
+
 ## Commands
 
 ```bash
@@ -60,16 +64,30 @@ Documents are served back via `GET /api/documents/[id]/route.ts`, which re-hashe
 
 `env.example` marks `WHATSAPP_GROUP_INVITE_URL`, `NEXT_PUBLIC_LANDING_VARIANT`, and `INVITE_ONE_TIME_USE` as deprecated. The `variant` field on `/api/inscricoes` is hard-restricted to `'MANUAL'` only (any other value is rejected with 400). The `registration_invites` table and `/api/convite/[token]` WhatsApp-redirect flow described in `MDs/` still exist in the DB/docs but are no longer part of the live flow — don't build new features on top of them without confirming with the user first.
 
+### Edital (grant proposal) flow
+
+A second, newer flow lets an already-registered community member submit a grant/tender proposal ("Edital"). It's gated behind the person having a *confirmed* InnovaNation registration and is entirely separate from `/api/inscricoes`.
+
+- **Routes**: `/edital` (`app/edital/page.tsx`) is the CPF gate; `/edital/proposta` (`app/edital/proposta/page.tsx`) renders the multi-step wizard. Neither page does server-side auth — the client holds a signed session token (`lib/edital-session.ts`) and every write/read is re-authenticated server-side per request.
+- **CPF gate** (`app/components/EditalCpfGate.tsx` → `POST /api/editais/validar-cpf`): looks up `registrations WHERE cpf = $1 AND terms_accepted = TRUE`; on a hit it mints an HMAC-signed, 1-hour token (`lib/edital-auth.ts`, `EDITAL_TOKEN_SECRET`) carrying the `registrationId` — no JWT library, a custom lightweight scheme. Has its own honeypot + rate limit, same as `/api/inscricoes`.
+- **Wizard** (`app/components/edital/EditalPropostaWizard.tsx` + `EditalStepper.tsx`): 6 steps — `equipe → instituicao → fotos → proposta → declaracoes → revisao` — each its own `Tela*.tsx` component. `equipe`/`instituicao`/`proposta` persist structured fields via the draft endpoint; `fotos`/`declaracoes` are upload-only steps. `TelaRevisao` computes missing requirements client-side (`lib/edital-completeness.ts`) before allowing submit, and doubles as the read-only post-submission summary.
+- **API** (`app/api/editais/proposta/*`, all authenticated via the `x-edital-token` header, not cookies):
+  - `rascunho` (draft GET/POST) upserts into `edital_submissions`, row-locked (`FOR UPDATE`) once `status = SUBMITTED` to block further edits.
+  - `documento` / `documento/[id]` handle per-requirement-code file uploads — **stored in S3** (`edital-submissions/{submissionId}/...`, via `lib/s3.ts`), unlike registration documents which live in Postgres `BYTEA`. Same magic-byte/MIME/size validation as `/api/inscricoes`; GET returns a short-lived (900s) signed URL rather than streaming bytes; ownership is checked by matching the token's `registrationId`.
+  - `enviar` (final submit) re-validates completeness twice — once before, once inside the row-locked transaction — generates a "Termo de Comprovação de Participação" PDF (`lib/edital-pdf.ts`) into S3 as an auto-generated document, flips status to `SUBMITTED`, then fires the same best-effort Google Sheets + n8n integrations pattern as `/api/inscricoes`.
+- **Data model** (`database/migrations/009_create_edital_submissions.sql`): `edital_submissions` (one row per `registration_id`, `status` DRAFT/SUBMITTED, step fields, `budget_items JSONB`) and `edital_submission_documents` (FK cascade, `requirement_code`, `s3_key`, `file_hash`).
+- **Notable asymmetry**: `/api/documents/[id]` (registration ID documents) has no auth/rate-limit/origin check at all — only hash-integrity verification — while the edital document endpoints are token-authenticated, rate-limited, and origin-checked. Be aware of this gap if touching either.
+
 ### Integrations
 
 - **Google Sheets** (`lib/google-sheets.ts`): auth resolves in priority order — (1) service-account JSON fetched from an S3 bucket (`GOOGLE_CREDENTIALS_S3_BUCKET`/`_KEY`), (2) full JSON in `GOOGLE_SERVICE_ACCOUNT_JSON`, (3) individual `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`GOOGLE_PRIVATE_KEY` vars. Sheet is resolved by `GOOGLE_SHEET_ID` (exact 44-char ID) or by name via the Drive API. Appends to the `Inscrições!A:L` range, falling back to the first sheet if that tab doesn't exist.
-- **n8n webhook**: hardcoded URL in `sendToN8NWebhook` inside `app/api/inscricoes/route.ts` (not env-configured) — receives the full registration payload including document hash/size/mime and a permanent `document_view_url` pointing back at `/api/documents/[id]`.
-- **AWS S3** (`lib/s3.ts`): used only for Google credential storage and (optionally) generic file upload/signed URLs — the actual ID documents go to Postgres BYTEA, not S3, despite `s3.ts` existing.
+- **n8n webhook**: hardcoded URL in `sendToN8NWebhook` inside `app/api/inscricoes/route.ts` (not env-configured) — receives the full registration payload including document hash/size/mime and a permanent `document_view_url` pointing back at `/api/documents/[id]`. The edital `enviar` route posts to n8n similarly.
+- **AWS S3** (`lib/s3.ts`): used for Google credential storage and for **all edital wizard documents/generated PDFs**. Registration ID documents (`/api/inscricoes`) still go to Postgres `BYTEA`, not S3 — the two document flows intentionally use different storage.
 - Analytics: Google Analytics (`G-VXCKTGXVQ2`) and Meta/Facebook Pixel (`717814604097091`) are wired directly into `app/layout.tsx` via inline `<Script>` tags using the CSP nonce.
 
 ### Frontend structure
 
-Single-page app: `app/page.tsx` composes section components from `app/components/` (Hero, Features, InnovaNation info, Testimonials, RegistrationForm, IdentityUpload, CTA, Navbar, MiniFooter, WhatsAppButton, ParticlesBackground, ConfettiEffect, TermsModal). `TermsModal` fetches live terms via `fetchActiveTerms()` (`lib/api.ts` → `GET /api/terms/active`) rather than hardcoding legal text. Fonts are self-hosted Poppins (`public/Poppins/*.ttf`, not Google Fonts) for CSP/perf reasons.
+Single-page app: `app/page.tsx` composes section components from `app/components/` (Hero, Features, InnovaNation info, Testimonials, RegistrationForm, IdentityUpload, CTA, Navbar, MiniFooter, WhatsAppButton, ParticlesBackground, ConfettiEffect, TermsModal). `TermsModal` fetches live terms via `fetchActiveTerms()` (`lib/api.ts` → `GET /api/terms/active`) rather than hardcoding legal text. Fonts are self-hosted Poppins (`public/Poppins/*.ttf`, not Google Fonts) for CSP/perf reasons. The `/edital/*` routes and `app/components/edital/*` are a separate wizard UI — see "Edital (grant proposal) flow" above.
 
 ### Deployment
 
