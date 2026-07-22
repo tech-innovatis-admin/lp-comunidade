@@ -20,7 +20,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
 
 const s3Client = new S3Client(s3Config);
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'innovanation-documents';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'innovanation-documents-aws';
 
 export async function uploadFile(
   file: Buffer,
@@ -56,10 +56,17 @@ export async function uploadFileToKey(
   return { filePath, url };
 }
 
-export async function getSignedFileUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
+export async function getSignedFileUrl(
+  filePath: string,
+  expiresIn: number = 3600,
+  downloadFileName?: string
+): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: filePath,
+    ...(downloadFileName
+      ? { ResponseContentDisposition: `attachment; filename="${downloadFileName}"` }
+      : {}),
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn });

@@ -19,6 +19,9 @@ export interface EditalPrefill {
 export interface EditalValidationSuccess {
   ok: true;
   token: string;
+  alreadySubmitted: boolean;
+  submittedAt: string | null;
+  certificateUrl: string | null;
   prefill: EditalPrefill;
 }
 

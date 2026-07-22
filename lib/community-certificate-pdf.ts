@@ -1,11 +1,11 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { getLetterheadImageBytes } from './letterhead';
 
-export type ParticipationTermInput = {
+export type CommunityCertificateInput = {
   fullName: string;
   cpf: string;
+  registrationId: number;
   registrationDate: Date;
-  submissionId: number;
 };
 
 function maskCpf(cpf: string): string {
@@ -65,7 +65,7 @@ async function drawParagraph(
   return currentY;
 }
 
-export async function generateParticipationTermPdf(input: ParticipationTermInput): Promise<Buffer> {
+export async function generateCommunityCertificatePdf(input: CommunityCertificateInput): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]);
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -82,7 +82,7 @@ export async function generateParticipationTermPdf(input: ParticipationTermInput
     height: page.getHeight(),
   });
 
-  page.drawText('Termo de Comprovação de Participação', {
+  page.drawText('Certificado de Inscrição na Comunidade', {
     x: margin,
     y: 785,
     size: 18,
@@ -90,7 +90,7 @@ export async function generateParticipationTermPdf(input: ParticipationTermInput
     color: rgb(0.08, 0.08, 0.08),
   });
 
-  page.drawText(`Submissão nº ${input.submissionId}`, {
+  page.drawText(`Cadastro nº ${input.registrationId}`, {
     x: margin,
     y: 760,
     size: 11,
@@ -102,7 +102,7 @@ export async function generateParticipationTermPdf(input: ParticipationTermInput
 
   cursorY = await drawParagraph(
     page,
-    `Declaramos, para os devidos fins, que ${input.fullName} (${maskCpf(input.cpf)}) apresentou proposta ao Edital PPI e teve a participação registrada pelo sistema em ${formatDateTime(input.registrationDate)}.`,
+    `Declaramos, para os devidos fins internos, que ${input.fullName} (${maskCpf(input.cpf)}) está inscrito(a) na comunidade InnovaNation, com aceite dos termos de uso registrado em ${formatDateTime(input.registrationDate)}.`,
     margin,
     cursorY,
     contentWidth,
@@ -115,7 +115,7 @@ export async function generateParticipationTermPdf(input: ParticipationTermInput
 
   cursorY = await drawParagraph(
     page,
-    'Este documento é emitido automaticamente pelo sistema após a validação do gate de CPF e serve como comprovação de participação na etapa de submissão da proposta.',
+    'Este documento é emitido automaticamente pelo sistema após a validação do CPF do interessado e serve para a equipe interna confirmar a inscrição confirmada na comunidade InnovaNation.',
     margin,
     cursorY,
     contentWidth,
