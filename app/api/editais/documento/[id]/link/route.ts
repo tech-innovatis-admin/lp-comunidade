@@ -2,20 +2,27 @@
  * GET /api/editais/documento/:id/link
  * Redirecionamento permanente para visualização de um documento do Edital PPI.
  * Gera uma URL assinada nova a cada acesso (nunca expira do ponto de vista de quem
- * usa o link), para uso em locais que precisam de um link estável — como a planilha
- * de acompanhamento do time interno. Sem autenticação por token do candidato,
- * mesmo padrão já adotado em /api/documents/[id] para documentos de inscrição.
+ * usa o link), para uso em locais que precisam de um link estável — como o painel
+ * admin e a planilha de acompanhamento do time interno. Protegido por sessão admin
+ * (não pelo token do candidato — quem acessa aqui é o time revisando, não quem
+ * submeteu a proposta).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { getSignedFileUrl } from '@/lib/s3';
+import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+    if (!verifyAdminSessionToken(token)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const { id } = await params;
     const documentId = Number.parseInt(id, 10);
 

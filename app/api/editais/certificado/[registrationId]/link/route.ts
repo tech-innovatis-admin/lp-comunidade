@@ -1,19 +1,25 @@
 /**
  * GET /api/editais/certificado/:registrationId/link
  * Redirecionamento permanente para o Certificado de Inscrição na Comunidade,
- * usado na planilha de acompanhamento do time interno. Mesmo padrão sem
- * autenticação extra de /api/editais/documento/[id]/link.
+ * usado no painel admin e na planilha de acompanhamento do time interno.
+ * Protegido por sessão admin.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { getSignedFileUrl } from '@/lib/s3';
+import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ registrationId: string }> }
 ) {
   try {
+    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+    if (!verifyAdminSessionToken(token)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
     const { registrationId } = await params;
     const id = Number.parseInt(registrationId, 10);
 
