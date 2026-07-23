@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
+import { FileText, Image as ImageIcon } from 'lucide-react'
 import { query, queryOne } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
 import { EDITAL_DOCUMENT_LABELS } from '@/lib/edital-completeness'
@@ -164,11 +165,15 @@ export default async function AdminEditalDetailPage({
                 <li key={code} className="bg-slate-900/40 rounded-xl p-4">
                   <p className="text-sm text-slate-400 mb-2">{EDITAL_DOCUMENT_LABELS[code]}</p>
                   {doc ? (
-                    <iframe
-                      src={`/api/editais/documento/${doc.id}/link`}
-                      className="w-full h-64 rounded-lg border border-slate-700/50 bg-white"
-                      title={EDITAL_DOCUMENT_LABELS[code]}
-                    />
+                    <a
+                      href={`/api/editais/documento/${doc.id}/link`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800/60 hover:bg-slate-800 rounded-lg border border-slate-700/50 text-[#22AE84] font-medium transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Abrir documento
+                    </a>
                   ) : (
                     <span className="text-slate-500">Não enviado</span>
                   )}
@@ -190,14 +195,10 @@ export default async function AdminEditalDetailPage({
                   href={`/api/editais/documento/${photo.id}/link`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block aspect-square rounded-xl overflow-hidden border border-slate-700/50"
+                  className="flex flex-col items-center justify-center gap-2 aspect-square rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900/40 hover:bg-slate-900/60 transition-colors text-slate-400 hover:text-[#22AE84]"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/editais/documento/${photo.id}/link`}
-                    alt={photo.original_filename || 'Foto do laboratório'}
-                    className="w-full h-full object-cover"
-                  />
+                  <ImageIcon className="w-6 h-6" />
+                  <span className="text-xs font-medium">Ver foto</span>
                 </a>
               ))}
             </div>

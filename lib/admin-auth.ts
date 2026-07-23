@@ -2,9 +2,12 @@
  * Token assinado (HMAC-SHA256) para a sessão do painel admin.
  * Placeholder de autenticação por senha única compartilhada — quando a
  * integração com o hub de plataformas (banco de usuários + tag "edital")
- * estiver pronta, só esta função e o fluxo de login em
- * app/api/admin/login/route.ts precisam mudar. Nenhuma página ou rota
- * protegida sabe como a sessão é validada por trás de verifyAdminSessionToken().
+ * estiver pronta, a troca deve viver majoritariamente neste arquivo e no
+ * fluxo de login em app/api/admin/login/route.ts. Porém, verifyAdminSessionToken()
+ * hoje é síncrona e não carrega identidade — uma verificação real por usuário
+ * provavelmente precisará virar async, o que exigiria adicionar `await` em
+ * todos os chamadores (app/admin/editais/page.tsx, app/admin/editais/[id]/page.tsx
+ * e as duas rotas /link).
  */
 
 import * as crypto from 'crypto';
