@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
-import { FileText, Image as ImageIcon } from 'lucide-react'
+import { Users, Building2, FileText, Camera, FileCheck, Award } from 'lucide-react'
 import { query, queryOne } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
-import { EDITAL_DOCUMENT_LABELS } from '@/lib/edital-completeness'
+import { EDITAL_DOCUMENT_LABELS, EDITAL_STEP_BY_DOCUMENT_CODE } from '@/lib/edital-completeness'
 import { EDITAL_REQUIRED_DOCUMENT_CODES, EDITAL_PHOTO_DOCUMENT_CODE } from '@/lib/edital-requirements'
+import ThumbnailCard from '@/app/components/admin/ThumbnailCard'
 
 interface SubmissionDetailRow {
   id: number
@@ -58,6 +59,76 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 }
 
+function getDocumentCodesForStep(step: string): string[] {
+  return EDITAL_REQUIRED_DOCUMENT_CODES.filter((code) => EDITAL_STEP_BY_DOCUMENT_CODE[code] === step)
+}
+
+function Block({
+  title,
+  icon,
+  children,
+}: {
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="bg-slate-900/30 border border-slate-800 rounded-3xl p-6 sm:p-8">
+      <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+        <span className="text-[#22AE84]">{icon}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-sm text-slate-400">{label}</dt>
+      <dd className="text-slate-200 whitespace-pre-wrap">{value}</dd>
+    </div>
+  )
+}
+
+function DocumentGrid({
+  codes,
+  documentsByCode,
+}: {
+  codes: string[]
+  documentsByCode: Map<string, DocumentRow[]>
+}) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+      {codes.map((code) => {
+        const doc = (documentsByCode.get(code) || [])[0]
+        const label = EDITAL_DOCUMENT_LABELS[code]
+
+        if (!doc) {
+          return (
+            <div
+              key={code}
+              className="aspect-[3/4] rounded-xl border border-dashed border-slate-700/50 flex items-center justify-center p-3"
+            >
+              <span className="text-xs text-slate-500 text-center">Não enviado</span>
+            </div>
+          )
+        }
+
+        return (
+          <ThumbnailCard
+            key={code}
+            thumbnailUrl={`/api/editais/documento/${doc.id}/thumbnail`}
+            openUrl={`/api/editais/documento/${doc.id}/link`}
+            label={label}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
 export default async function AdminEditalDetailPage({
   params,
 }: {
@@ -94,7 +165,7 @@ export default async function AdminEditalDetailPage({
 
   return (
     <main className="flex-1 relative z-10 min-h-screen px-4 py-16">
-      <div className="max-w-3xl mx-auto space-y-10">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">{submission.full_name}</h1>
           <p className="text-slate-400">
@@ -102,37 +173,29 @@ export default async function AdminEditalDetailPage({
           </p>
         </div>
 
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">Respostas</h2>
+        <Block title="Equipe" icon={<Users className="w-5 h-5" />}>
           <dl className="space-y-4">
-            <div>
-              <dt className="text-sm text-slate-400">Descrição da equipe</dt>
-              <dd className="text-slate-200">{submission.team_description || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-400">Instituição</dt>
-              <dd className="text-slate-200">
-                {submission.institution_name || '—'} ({submission.institution_cnpj || 'CNPJ não informado'})
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-400">Laboratório</dt>
-              <dd className="text-slate-200">
-                {submission.lab_name || '—'} — {submission.lab_area || '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-400">Público atendido pelo laboratório</dt>
-              <dd className="text-slate-200">{submission.lab_served_public || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-400">Justificativa técnica</dt>
-              <dd className="text-slate-200 whitespace-pre-wrap">{submission.technical_justification || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-400">Resultados esperados</dt>
-              <dd className="text-slate-200 whitespace-pre-wrap">{submission.expected_results || '—'}</dd>
-            </div>
+            <Field label="Descrição da equipe" value={submission.team_description || '—'} />
+          </dl>
+          <DocumentGrid codes={getDocumentCodesForStep('equipe')} documentsByCode={documentsByCode} />
+        </Block>
+
+        <Block title="Instituição" icon={<Building2 className="w-5 h-5" />}>
+          <dl className="space-y-4">
+            <Field
+              label="Instituição"
+              value={`${submission.institution_name || '—'} (${submission.institution_cnpj || 'CNPJ não informado'})`}
+            />
+            <Field label="Laboratório" value={`${submission.lab_name || '—'} — ${submission.lab_area || '—'}`} />
+            <Field label="Público atendido pelo laboratório" value={submission.lab_served_public || '—'} />
+          </dl>
+          <DocumentGrid codes={getDocumentCodesForStep('instituicao')} documentsByCode={documentsByCode} />
+        </Block>
+
+        <Block title="Proposta" icon={<FileText className="w-5 h-5" />}>
+          <dl className="space-y-4">
+            <Field label="Justificativa técnica" value={submission.technical_justification || '—'} />
+            <Field label="Resultados esperados" value={submission.expected_results || '—'} />
             <div>
               <dt className="text-sm text-slate-400 mb-2">Itens de orçamento</dt>
               <dd>
@@ -153,69 +216,40 @@ export default async function AdminEditalDetailPage({
               </dd>
             </div>
           </dl>
-        </section>
+        </Block>
 
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">Documentos</h2>
-          <ul className="space-y-3">
-            {EDITAL_REQUIRED_DOCUMENT_CODES.map((code) => {
-              const docsForCode = documentsByCode.get(code) || []
-              const doc = docsForCode[0]
-              return (
-                <li key={code} className="bg-slate-900/40 rounded-xl p-4">
-                  <p className="text-sm text-slate-400 mb-2">{EDITAL_DOCUMENT_LABELS[code]}</p>
-                  {doc ? (
-                    <a
-                      href={`/api/editais/documento/${doc.id}/link`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-3 bg-slate-800/60 hover:bg-slate-800 rounded-lg border border-slate-700/50 text-[#22AE84] font-medium transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Abrir documento
-                    </a>
-                  ) : (
-                    <span className="text-slate-500">Não enviado</span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">Fotos do laboratório</h2>
+        <Block title="Fotos do laboratório" icon={<Camera className="w-5 h-5" />}>
+          <DocumentGrid codes={getDocumentCodesForStep('fotos')} documentsByCode={documentsByCode} />
           {photos.length === 0 ? (
-            <span className="text-slate-500">Não enviado</span>
+            <p className="text-slate-500 mt-4">Nenhuma foto enviada</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
               {photos.map((photo) => (
-                <a
+                <ThumbnailCard
                   key={photo.id}
-                  href={`/api/editais/documento/${photo.id}/link`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col items-center justify-center gap-2 aspect-square rounded-xl overflow-hidden border border-slate-700/50 bg-slate-900/40 hover:bg-slate-900/60 transition-colors text-slate-400 hover:text-[#22AE84]"
-                >
-                  <ImageIcon className="w-6 h-6" />
-                  <span className="text-xs font-medium">Ver foto</span>
-                </a>
+                  thumbnailUrl={`/api/editais/documento/${photo.id}/thumbnail`}
+                  openUrl={`/api/editais/documento/${photo.id}/link`}
+                  label={photo.original_filename || 'Foto do laboratório'}
+                  aspectClassName="aspect-square"
+                />
               ))}
             </div>
           )}
-        </section>
+        </Block>
 
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">Certificado de inscrição na comunidade</h2>
-          <a
-            href={`/api/editais/certificado/${submission.registration_id}/link`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block px-6 py-3 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all"
-          >
-            Ver certificado
-          </a>
-        </section>
+        <Block title="Declarações" icon={<FileCheck className="w-5 h-5" />}>
+          <DocumentGrid codes={getDocumentCodesForStep('declaracoes')} documentsByCode={documentsByCode} />
+        </Block>
+
+        <Block title="Certificado de inscrição na comunidade" icon={<Award className="w-5 h-5" />}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ThumbnailCard
+              thumbnailUrl={`/api/editais/certificado/${submission.registration_id}/thumbnail`}
+              openUrl={`/api/editais/certificado/${submission.registration_id}/link`}
+              label="Certificado de inscrição"
+            />
+          </div>
+        </Block>
       </div>
     </main>
   )
