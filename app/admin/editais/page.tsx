@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { query } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
 
@@ -47,22 +48,26 @@ export default async function AdminEditaisPage() {
             <Link
               key={submission.id}
               href={`/admin/editais/${submission.id}`}
-              className="block bg-slate-900/40 hover:bg-slate-900/60 border border-slate-800 rounded-2xl p-6 transition-colors"
+              className="group flex items-center gap-4 bg-slate-900/40 hover:bg-slate-900/60 border border-slate-800 hover:border-[#22AE84]/40 rounded-2xl p-6 transition-all"
             >
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-white font-bold">{submission.full_name}</p>
-                  <p className="text-sm text-slate-400">{submission.institution_name || 'Sem instituição informada'}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <span className="inline-block px-3 py-1 bg-[#22AE84]/20 text-[#22AE84] rounded-full text-xs font-bold">
-                    {submission.status}
-                  </span>
-                  <p className="text-xs text-slate-500 mt-2">
-                    {new Date(submission.submitted_at).toLocaleString('pt-BR')}
-                  </p>
-                </div>
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#22AE84]/10 flex items-center justify-center text-[#22AE84] font-bold text-lg">
+                {submission.full_name.charAt(0).toUpperCase()}
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold truncate">{submission.full_name}</p>
+                <p className="text-sm text-slate-400 truncate">
+                  {submission.institution_name || 'Sem instituição informada'}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <span className="inline-block px-3 py-1 bg-[#22AE84]/20 text-[#22AE84] rounded-full text-xs font-bold">
+                  {submission.status}
+                </span>
+                <p className="text-xs text-slate-500 mt-2">
+                  {new Date(submission.submitted_at).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-[#22AE84] transition-colors flex-shrink-0" />
             </Link>
           ))}
         </div>
