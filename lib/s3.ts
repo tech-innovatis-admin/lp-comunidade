@@ -72,6 +72,22 @@ export async function getSignedFileUrl(
   return await getSignedUrl(s3Client, command, { expiresIn });
 }
 
+export async function getFileBytes(filePath: string): Promise<Buffer> {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: filePath,
+  });
+
+  const response = await s3Client.send(command);
+  const bytes = await response.Body?.transformToByteArray();
+
+  if (!bytes) {
+    throw new Error(`Arquivo vazio ou não encontrado no S3: ${filePath}`);
+  }
+
+  return Buffer.from(bytes);
+}
+
 export function isValidFileType(mimeType: string): boolean {
   const allowedTypes = [
     'image/jpeg',
