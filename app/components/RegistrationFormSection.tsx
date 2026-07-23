@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight, X, AlertCircle } from 'lucide-react'
+import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight, X, AlertCircle, Link2, Copy } from 'lucide-react'
 import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
 import { fetchActiveTerms, submitRegistration, type TermsResponse } from '@/lib/api'
@@ -62,6 +62,7 @@ export default function RegistrationFormSection() {
   const [showDuplicateErrorModal, setShowDuplicateErrorModal] = useState(false)
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('')
   const [formStarted, setFormStarted] = useState(false)
+  const [submissionLink, setSubmissionLink] = useState('')
 
   // Variante fixa: MANUAL
   const variant = 'MANUAL'
@@ -534,6 +535,18 @@ export default function RegistrationFormSection() {
     setShowMissingFieldsModal(false)
   }
 
+  const handleCopySubmissionLink = async () => {
+    if (!submissionLink) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(submissionLink)
+    } catch {
+      window.prompt('Copie o link da inscrição', submissionLink)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -547,6 +560,7 @@ export default function RegistrationFormSection() {
     }
 
     setIsSubmitting(true)
+    setSubmissionLink('')
 
     try {
       // Prepara FormData
@@ -570,7 +584,10 @@ export default function RegistrationFormSection() {
       formDataToSend.append('website', formData.website)
 
       // Envia para API
-      await submitRegistration(formDataToSend)
+      const response = await submitRegistration(formDataToSend)
+      if (response.documentViewUrl) {
+        setSubmissionLink(response.documentViewUrl)
+      }
 
       // Tracking: Lead gerado com sucesso
       trackEvent('generate_lead', {
@@ -713,6 +730,25 @@ export default function RegistrationFormSection() {
                   Seus dados estão em análise pela nossa equipe. Em breve, entraremos em contato.
                 </p>
               </div>
+              {submissionLink && (
+                <div className="w-full space-y-3 rounded-2xl border border-slate-700/60 bg-slate-950/40 p-4 text-left">
+                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    <Link2 className="h-4 w-4 text-[#22AE84]" />
+                    Link para enviar
+                  </p>
+                  <p className="break-all text-sm text-slate-200">
+                    {submissionLink}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCopySubmissionLink}
+                    className="inline-flex items-center gap-2 rounded-full bg-[#22AE84] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1C8C6A]"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copiar link
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

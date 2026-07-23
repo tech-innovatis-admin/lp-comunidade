@@ -14,6 +14,7 @@ export interface TermsResponse {
 export interface RegistrationResponse {
   status: 'ok';
   inviteUrl?: string;
+  documentViewUrl?: string | null;
 }
 
 /**

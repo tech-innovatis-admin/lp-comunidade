@@ -6,6 +6,7 @@ import { generateParticipationTermPdf } from '@/lib/edital-pdf';
 import { uploadFile } from '@/lib/s3';
 import { calculateFileHash } from '@/lib/utils';
 import { appendEditalSubmissionToSheet } from '@/lib/google-sheets';
+import { getPublicBaseUrl } from '@/lib/public-url';
 import {
   EDITAL_AUTO_GENERATED_DOCUMENT_CODE,
   EDITAL_MIN_PHOTO_COUNT,
@@ -310,7 +311,7 @@ export async function POST(request: NextRequest) {
 
     // Links permanentes (via rotas de redirecionamento, nunca expiram do ponto de
     // vista de quem os usa) para a planilha de acompanhamento do time interno.
-    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://comunidade.innovatismc.com';
+    const baseUrl = getPublicBaseUrl(request);
     const documentLinks: Record<string, string> = {};
     const photoLinks: string[] = [];
 
