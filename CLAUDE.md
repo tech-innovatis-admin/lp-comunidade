@@ -78,6 +78,12 @@ A second, newer flow lets an already-registered community member submit a grant/
 - **Data model** (`database/migrations/009_create_edital_submissions.sql`): `edital_submissions` (one row per `registration_id`, `status` DRAFT/SUBMITTED, step fields, `budget_items JSONB`) and `edital_submission_documents` (FK cascade, `requirement_code`, `s3_key`, `file_hash`).
 - **Notable asymmetry**: `/api/documents/[id]` (registration ID documents) has no auth/rate-limit/origin check at all — only hash-integrity verification — while the edital document endpoints are token-authenticated, rate-limited, and origin-checked. Be aware of this gap if touching either.
 
+### Admin panel (Edital submissions)
+
+`/admin/login` → `/admin/editais` (list of `SUBMITTED` proposals) → `/admin/editais/[id]` (full detail: answers, inline document/photo preview). Protected by a **placeholder** shared-password session (`ADMIN_PASSWORD` + `ADMIN_TOKEN_SECRET`, HMAC-signed cookie via `lib/admin-auth.ts` — same pattern as `lib/edital-auth.ts`). Every protected page/route calls `verifyAdminSessionToken()` directly; there's no middleware-based gate (`middleware.ts` runs on the Edge runtime, which can't use Node's `crypto` module for HMAC verification). This placeholder is meant to be swapped for the Innovatis cross-platform user/tag system later — that swap only touches `lib/admin-auth.ts` and the login route.
+
+The two document-link redirect routes (`/api/editais/documento/[id]/link`, `/api/editais/certificado/[registrationId]/link`) now require this same admin session — they were public before this feature, protected only by ID obscurity (matching `/api/documents/[id]`, which is *still* fully public — that asymmetry remains).
+
 ### Integrations
 
 - **Google Sheets** (`lib/google-sheets.ts`): auth resolves in priority order — (1) service-account JSON fetched from an S3 bucket (`GOOGLE_CREDENTIALS_S3_BUCKET`/`_KEY`), (2) full JSON in `GOOGLE_SERVICE_ACCOUNT_JSON`, (3) individual `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`GOOGLE_PRIVATE_KEY` vars. Sheet is resolved by `GOOGLE_SHEET_ID` (exact 44-char ID) or by name via the Drive API. Appends to the `Inscrições!A:L` range, falling back to the first sheet if that tab doesn't exist.
