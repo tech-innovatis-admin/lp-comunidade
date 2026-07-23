@@ -84,6 +84,8 @@ A second, newer flow lets an already-registered community member submit a grant/
 
 The two document-link redirect routes (`/api/editais/documento/[id]/link`, `/api/editais/certificado/[registrationId]/link`) now require this same admin session — they were public before this feature, protected only by ID obscurity (matching `/api/documents/[id]`, which is *still* fully public — that asymmetry remains).
 
+Documents, photos, and the community certificate render as real content thumbnails (PDF first page rendered to an image via `pdf-to-img`; photos resized via `sharp`) rather than plain links — generated lazily on first admin view and cached permanently in S3 (`thumbnail_s3_key` on `edital_submission_documents`, `community_certificate_thumbnail_s3_key` on `registrations`), served through same-origin thumbnail routes (`/api/editais/documento/[id]/thumbnail`, `/api/editais/certificado/[registrationId]/thumbnail`) rather than a redirect to S3 — this is what lets them satisfy the site's `img-src 'self'` CSP without allowlisting the S3 bucket. `ThumbnailCard` (`app/components/admin/ThumbnailCard.tsx`) falls back to a generic icon card via an `onError` handler if generation fails, so a bad PDF never breaks the page.
+
 ### Integrations
 
 - **Google Sheets** (`lib/google-sheets.ts`): auth resolves in priority order — (1) service-account JSON fetched from an S3 bucket (`GOOGLE_CREDENTIALS_S3_BUCKET`/`_KEY`), (2) full JSON in `GOOGLE_SERVICE_ACCOUNT_JSON`, (3) individual `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`GOOGLE_PRIVATE_KEY` vars. Sheet is resolved by `GOOGLE_SHEET_ID` (exact 44-char ID) or by name via the Drive API. Appends to the `Inscrições!A:L` range, falling back to the first sheet if that tab doesn't exist.
