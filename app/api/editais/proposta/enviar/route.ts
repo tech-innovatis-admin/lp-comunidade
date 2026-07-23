@@ -3,7 +3,7 @@ import { query, queryOne, transaction } from '@/lib/db';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
 import { generateParticipationTermPdf } from '@/lib/edital-pdf';
-import { getSignedFileUrl, uploadFile } from '@/lib/s3';
+import { uploadFile } from '@/lib/s3';
 import { calculateFileHash } from '@/lib/utils';
 import { appendEditalSubmissionToSheet } from '@/lib/google-sheets';
 import {
@@ -236,12 +236,12 @@ export async function POST(request: NextRequest) {
 
       const documentRows = (await client.query(
         `
-          SELECT requirement_code
+          SELECT id, requirement_code
           FROM edital_submission_documents
           WHERE submission_id = $1
         `,
         [submission.id]
-      )) as { rows: Array<{ requirement_code: string }> };
+      )) as { rows: Array<{ id: number; requirement_code: string }> };
 
       const documentCodes = documentRows.rows.map((row) => row.requirement_code);
       const missing = computeMissingItems(submission, documentCodes);
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         return { status: 'incomplete' as const, missing };
       }
 
-      await client.query(
+      const termDocumentRows = (await client.query(
         `
           INSERT INTO edital_submission_documents (
             submission_id,
@@ -262,6 +262,7 @@ export async function POST(request: NextRequest) {
             original_filename
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id
         `,
         [
           submission.id,
@@ -272,7 +273,7 @@ export async function POST(request: NextRequest) {
           pdfBuffer.length,
           `termo-participacao-${submission.id}.pdf`,
         ]
-      );
+      )) as { rows: Array<{ id: number }> };
 
       const updateRows = (await client.query(
         `
@@ -290,6 +291,10 @@ export async function POST(request: NextRequest) {
         status: 'ok' as const,
         submission,
         submittedAt: updateRows.rows[0].submitted_at,
+        documents: [
+          ...documentRows.rows,
+          { id: termDocumentRows.rows[0].id, requirement_code: EDITAL_AUTO_GENERATED_DOCUMENT_CODE },
+        ],
       };
     });
 
@@ -302,6 +307,21 @@ export async function POST(request: NextRequest) {
     }
 
     const submittedAtIso = result.submittedAt.toISOString();
+
+    // Links permanentes (via rotas de redirecionamento, nunca expiram do ponto de
+    // vista de quem os usa) para a planilha de acompanhamento do time interno.
+    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://comunidade.innovatismc.com';
+    const documentLinks: Record<string, string> = {};
+    const photoLinks: string[] = [];
+
+    for (const doc of result.documents) {
+      const link = `${baseUrl}/api/editais/documento/${doc.id}/link`;
+      if (doc.requirement_code === EDITAL_PHOTO_DOCUMENT_CODE) {
+        photoLinks.push(link);
+      } else {
+        documentLinks[doc.requirement_code] = link;
+      }
+    }
 
     const sheetPayload = {
       id: result.submission.id,
@@ -317,6 +337,9 @@ export async function POST(request: NextRequest) {
       technicalJustification: result.submission.technical_justification,
       expectedResults: result.submission.expected_results,
       submittedAt: submittedAtIso,
+      documentLinks,
+      photoLinks,
+      communityCertificateUrl: `${baseUrl}/api/editais/certificado/${result.submission.registration_id}/link`,
     };
 
     // Integrações best-effort, disparadas após o commit da transação.
@@ -328,15 +351,12 @@ export async function POST(request: NextRequest) {
     const webhookUrl = process.env.WEBHOOK_N8N_URL;
     if (webhookUrl) {
       (async () => {
-        const termDocumentSignedUrl = await getSignedFileUrl(upload.filePath, 900);
-
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...sheetPayload,
             source: 'edital-proposta',
-            termDocumentSignedUrl,
           }),
         });
       })().catch((error) => {

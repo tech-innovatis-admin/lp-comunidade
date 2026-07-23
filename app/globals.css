@@ -331,6 +331,16 @@ body {
   animation-timing-function: ease-out !important;
 }
 
+/* Esconde a barra de rolagem visualmente, mantendo o scroll funcional */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Otimização para mobile */
 @media (max-width: 768px) {
   .confetti-piece {
