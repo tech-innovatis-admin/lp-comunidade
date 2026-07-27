@@ -5,7 +5,9 @@ import { query, queryOne } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
 import { EDITAL_DOCUMENT_LABELS, EDITAL_STEP_BY_DOCUMENT_CODE } from '@/lib/edital-completeness'
 import { EDITAL_REQUIRED_DOCUMENT_CODES, EDITAL_PHOTO_DOCUMENT_CODE } from '@/lib/edital-requirements'
+import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
 import ThumbnailCard from '@/app/components/admin/ThumbnailCard'
+import SubmissionActions from '@/app/components/admin/SubmissionActions'
 
 interface SubmissionDetailRow {
   id: number
@@ -23,6 +25,13 @@ interface SubmissionDetailRow {
   technical_justification: string | null
   expected_results: string | null
   submitted_at: string
+  evaluation_scores: Record<string, number> | null
+  evaluation_total_score: number | null
+  evaluated_by: string | null
+  evaluated_at: string | null
+  disqualified_at: string | null
+  disqualified_reason: string | null
+  disqualified_by: string | null
 }
 
 interface DocumentRow {
@@ -36,7 +45,9 @@ async function loadSubmission(id: number): Promise<SubmissionDetailRow | null> {
     `SELECT s.id, s.registration_id, s.status, r.full_name, r.cpf,
             s.team_description, s.institution_name, s.institution_cnpj,
             s.lab_name, s.lab_area, s.lab_served_public, s.budget_items,
-            s.technical_justification, s.expected_results, s.submitted_at
+            s.technical_justification, s.expected_results, s.submitted_at,
+            s.evaluation_scores, s.evaluation_total_score, s.evaluated_by, s.evaluated_at,
+            s.disqualified_at, s.disqualified_reason, s.disqualified_by
      FROM edital_submissions s
      INNER JOIN registrations r ON r.id = s.registration_id
      WHERE s.id = $1 AND s.status = 'SUBMITTED'
@@ -163,6 +174,28 @@ export default async function AdminEditalDetailPage({
 
   const photos = documentsByCode.get(EDITAL_PHOTO_DOCUMENT_CODE) || []
 
+  const evaluation =
+    submission.evaluation_total_score !== null &&
+    submission.evaluation_scores &&
+    submission.evaluated_by &&
+    submission.evaluated_at
+      ? {
+          scores: submission.evaluation_scores,
+          total: submission.evaluation_total_score,
+          evaluatedBy: submission.evaluated_by,
+          evaluatedAt: submission.evaluated_at,
+        }
+      : null
+
+  const disqualification =
+    submission.disqualified_at && submission.disqualified_reason && submission.disqualified_by
+      ? {
+          reason: submission.disqualified_reason,
+          disqualifiedBy: submission.disqualified_by,
+          disqualifiedAt: submission.disqualified_at,
+        }
+      : null
+
   return (
     <main className="flex-1 relative z-10 min-h-screen px-4 py-16">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -171,6 +204,37 @@ export default async function AdminEditalDetailPage({
           <p className="text-slate-400">
             CPF {submission.cpf} · Enviada em {new Date(submission.submitted_at).toLocaleString('pt-BR')}
           </p>
+
+          {evaluation && (
+            <p className="mt-3 text-sm">
+              <span
+                className={`inline-block px-3 py-1 rounded-full font-bold ${
+                  evaluation.total >= EDITAL_APPROVAL_MIN_SCORE
+                    ? 'bg-[#22AE84]/20 text-[#22AE84]'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                Nota: {evaluation.total} / 100
+              </span>
+              <span className="text-slate-500 ml-2">
+                avaliado por {evaluation.evaluatedBy} em {new Date(evaluation.evaluatedAt).toLocaleString('pt-BR')}
+              </span>
+            </p>
+          )}
+
+          {disqualification && (
+            <div className="mt-3 bg-red-900/20 border border-red-800/40 rounded-xl px-4 py-3">
+              <p className="text-red-300 font-bold text-sm">Proposta desqualificada</p>
+              <p className="text-red-300/80 text-sm mt-1">{disqualification.reason}</p>
+              <p className="text-red-300/60 text-xs mt-1">
+                por {disqualification.disqualifiedBy} em {new Date(disqualification.disqualifiedAt).toLocaleString('pt-BR')}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <SubmissionActions submissionId={submission.id} evaluation={evaluation} disqualification={disqualification} />
+          </div>
         </div>
 
         <Block title="Equipe" icon={<Users className="w-5 h-5" />}>
