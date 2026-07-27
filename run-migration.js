@@ -21,7 +21,8 @@ const pool = new Pool({
       'database/migrations/008_add_address_fields.sql',
       'database/migrations/009_create_edital_submissions.sql',
       'database/migrations/010_add_community_certificate_to_registrations.sql',
-      'database/migrations/011_add_thumbnail_support.sql'
+      'database/migrations/011_add_thumbnail_support.sql',
+      'database/migrations/012_add_edital_evaluation.sql'
     ];
 
     for (const file of migrations) {
