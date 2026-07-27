@@ -35,7 +35,7 @@ export interface PlatformUserRow {
 
 export async function findPlatformUserByUsername(username: string): Promise<PlatformUserRow | null> {
   const result = await platformsPool.query<PlatformUserRow>(
-    `SELECT id, username, name, hash, platforms
+    `SELECT id::integer, username, name, hash, platforms
      FROM users
      WHERE LOWER(username) = LOWER($1)
      LIMIT 1`,
