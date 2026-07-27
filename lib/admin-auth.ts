@@ -1,20 +1,21 @@
 /**
- * Token assinado (HMAC-SHA256) para a sessão do painel admin.
- * Placeholder de autenticação por senha única compartilhada — quando a
- * integração com o hub de plataformas (banco de usuários + tag "edital")
- * estiver pronta, a troca deve viver majoritariamente neste arquivo e no
- * fluxo de login em app/api/admin/login/route.ts. Porém, verifyAdminSessionToken()
- * hoje é síncrona e não carrega identidade — uma verificação real por usuário
- * provavelmente precisará virar async, o que exigiria adicionar `await` em
- * todos os chamadores (app/admin/editais/page.tsx, app/admin/editais/[id]/page.tsx
- * e as duas rotas /link).
+ * Token assinado (HMAC-SHA256) para a sessão do painel admin, carregando a
+ * identidade de quem logou (id/username/name da tabela `users` compartilhada
+ * — ver lib/platforms-db.ts). Antes, este token não carregava identidade e
+ * validava só uma senha única (ADMIN_PASSWORD); esse esquema foi removido.
  */
 
 import * as crypto from 'crypto';
 
 export const ADMIN_SESSION_COOKIE_NAME = 'admin_session';
 
-interface AdminTokenPayload {
+export interface AdminSessionIdentity {
+  userId: number;
+  username: string;
+  name: string;
+}
+
+interface AdminTokenPayload extends AdminSessionIdentity {
   iat: number;
   exp: number;
 }
@@ -44,9 +45,10 @@ function sign(encodedPayload: string): string {
   return crypto.createHmac('sha256', getSecret()).update(encodedPayload).digest('base64url');
 }
 
-export function createAdminSessionToken(): string {
+export function createAdminSessionToken(identity: AdminSessionIdentity): string {
   const now = Math.floor(Date.now() / 1000);
   const payload: AdminTokenPayload = {
+    ...identity,
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
   };
@@ -56,14 +58,14 @@ export function createAdminSessionToken(): string {
   return `${encodedPayload}.${signature}`;
 }
 
-export function verifyAdminSessionToken(token: string | undefined | null): boolean {
+export function verifyAdminSessionToken(token: string | undefined | null): AdminSessionIdentity | null {
   if (!token || typeof token !== 'string') {
-    return false;
+    return null;
   }
 
   const parts = token.split('.');
   if (parts.length !== 2) {
-    return false;
+    return null;
   }
 
   const [encodedPayload, signature] = parts;
@@ -73,24 +75,32 @@ export function verifyAdminSessionToken(token: string | undefined | null): boole
   const expectedBuffer = Buffer.from(expectedSignature);
 
   if (signatureBuffer.length !== expectedBuffer.length) {
-    return false;
+    return null;
   }
 
   if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
-    return false;
+    return null;
   }
 
   let payload: AdminTokenPayload;
   try {
     payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf-8'));
   } catch {
-    return false;
+    return null;
   }
 
-  if (typeof payload.exp !== 'number') {
-    return false;
+  if (
+    typeof payload.exp !== 'number' ||
+    typeof payload.userId !== 'number' ||
+    typeof payload.name !== 'string'
+  ) {
+    return null;
   }
 
   const now = Math.floor(Date.now() / 1000);
-  return payload.exp >= now;
+  if (payload.exp < now) {
+    return null;
+  }
+
+  return { userId: payload.userId, username: payload.username, name: payload.name };
 }
