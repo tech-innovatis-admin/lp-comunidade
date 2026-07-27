@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
-import { Users, Building2, FileText, Camera, FileCheck, Award } from 'lucide-react'
+import Link from 'next/link'
+import { Users, Building2, FileText, Camera, FileCheck, Award, ArrowLeft } from 'lucide-react'
 import { query, queryOne } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
 import { EDITAL_DOCUMENT_LABELS, EDITAL_STEP_BY_DOCUMENT_CODE } from '@/lib/edital-completeness'
@@ -200,6 +201,13 @@ export default async function AdminEditalDetailPage({
     <main className="flex-1 relative z-10 min-h-screen px-4 py-16">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
+          <Link
+            href="/admin/editais"
+            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para a lista
+          </Link>
           <h1 className="text-2xl font-bold text-white mb-1">{submission.full_name}</h1>
           <p className="text-slate-400">
             CPF {submission.cpf} · Enviada em {new Date(submission.submitted_at).toLocaleString('pt-BR')}

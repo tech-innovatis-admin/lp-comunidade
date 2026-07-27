@@ -36,6 +36,7 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
   const router = useRouter()
   const [showEvaluationModal, setShowEvaluationModal] = useState(false)
   const [showDisqualifyModal, setShowDisqualifyModal] = useState(false)
+  const [showRequalifyModal, setShowRequalifyModal] = useState(false)
   const [scores, setScores] = useState<Record<string, number>>(() => initialScores(evaluation))
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
@@ -51,6 +52,11 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
     setReason('')
     setError('')
     setShowDisqualifyModal(true)
+  }
+
+  const openRequalifyModal = () => {
+    setError('')
+    setShowRequalifyModal(true)
   }
 
   const validation = validateEvaluationScores(scores)
@@ -120,22 +126,21 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
   }
 
   const handleRequalify = async () => {
-    if (!window.confirm('Reverter a desqualificação desta proposta?')) {
-      return
-    }
-
     setSaving(true)
+    setError('')
 
     try {
       const response = await fetch(`/api/admin/editais/${submissionId}/requalificar`, { method: 'POST' })
       if (!response.ok) {
-        window.alert('Não foi possível reverter a desqualificação. Tente novamente.')
+        setError('Não foi possível reverter a desqualificação. Tente novamente.')
         setSaving(false)
         return
       }
+      setShowRequalifyModal(false)
+      setSaving(false)
       router.refresh()
     } catch {
-      window.alert('Não foi possível reverter a desqualificação. Tente novamente.')
+      setError('Não foi possível reverter a desqualificação. Tente novamente.')
       setSaving(false)
     }
   }
@@ -153,8 +158,7 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
       {disqualification ? (
         <button
           type="button"
-          onClick={handleRequalify}
-          disabled={saving}
+          onClick={openRequalifyModal}
           className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50"
         >
           Reverter desqualificação
@@ -171,7 +175,7 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
 
       {showEvaluationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto admin-modal-scroll">
             <h2 className="text-lg font-bold text-white mb-6">Avaliação da proposta</h2>
 
             <div className="space-y-4">
@@ -270,6 +274,42 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
                 onClick={handleDisqualify}
                 disabled={saving}
                 className="flex-1 px-5 py-3 bg-red-900/60 hover:bg-red-900/80 text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRequalifyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8">
+            <h2 className="text-lg font-bold text-white mb-4">Reverter desqualificação</h2>
+            <p className="text-slate-300">Tem certeza que deseja reverter a desqualificação desta proposta?</p>
+
+            {error && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-red-400 font-medium">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRequalifyModal(false)}
+                disabled={saving}
+                className="flex-1 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleRequalify}
+                disabled={saving}
+                className="flex-1 px-5 py-3 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Confirmar
