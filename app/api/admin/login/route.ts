@@ -13,6 +13,11 @@ import { findPlatformUserByUsername } from '@/lib/platforms-db';
 
 const REQUIRED_PLATFORM_TAG = 'edital-admin';
 
+// Hash "morto" usado quando o usuário não existe ou não tem a tag exigida, para que
+// bcrypt.compare sempre rode e o tempo de resposta não vaze quem tem conta válida
+// (evita enumeração de usuário/tag por timing).
+const DUMMY_HASH_FOR_TIMING_SAFETY = bcrypt.hashSync('dummy-password-never-used-for-real-auth', 10);
+
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return applyNoStore(NextResponse.json(body, init));
 }
@@ -52,19 +57,19 @@ export async function POST(request: NextRequest) {
       jsonResponse({ error: 'Credenciais inválidas ou sem acesso a este painel' }, { status: 401 });
 
     const user = await findPlatformUserByUsername(username);
-    if (!user || !(user.platforms || []).includes(REQUIRED_PLATFORM_TAG)) {
-      return genericError();
-    }
+    const hasAccess = !!user && (user.platforms || []).includes(REQUIRED_PLATFORM_TAG);
+    const hashToCompare = hasAccess ? user!.hash : DUMMY_HASH_FOR_TIMING_SAFETY;
 
-    const passwordMatches = await bcrypt.compare(password, user.hash);
-    if (!passwordMatches) {
+    const passwordMatches = await bcrypt.compare(password, hashToCompare);
+
+    if (!hasAccess || !passwordMatches) {
       return genericError();
     }
 
     const token = createAdminSessionToken({
-      userId: user.id,
-      username: user.username || username,
-      name: user.name,
+      userId: user!.id,
+      username: user!.username || username,
+      name: user!.name,
     });
     const response = jsonResponse({ ok: true });
 
