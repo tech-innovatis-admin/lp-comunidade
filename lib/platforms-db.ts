@@ -17,6 +17,7 @@ const platformsPool = new Pool({
   ssl: process.env.PLATFORMS_DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   max: 5,
   idleTimeoutMillis: 30000,
+  // Mesmo motivo do timeout em lib/db.ts: RDS remoto, latencia notavel a partir do dev local.
   connectionTimeoutMillis: 10000,
 });
 
