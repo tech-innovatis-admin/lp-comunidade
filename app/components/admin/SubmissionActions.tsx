@@ -129,11 +129,13 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
     try {
       const response = await fetch(`/api/admin/editais/${submissionId}/requalificar`, { method: 'POST' })
       if (!response.ok) {
+        window.alert('Não foi possível reverter a desqualificação. Tente novamente.')
         setSaving(false)
         return
       }
       router.refresh()
     } catch {
+      window.alert('Não foi possível reverter a desqualificação. Tente novamente.')
       setSaving(false)
     }
   }
