@@ -1,88 +1,46 @@
-# 📄 Visualização de Documentos no Google Sheets
+# Visualizacao de Documentos no Google Sheets
 
-## 🎯 Objetivo
+## Objetivo
 
-Permitir que os revisores visualizem os documentos de identidade anexados diretamente na planilha do Google Sheets, facilitando a conferência manual das inscrições.
+Permitir que o time interno veja o documento anexado pela inscricao diretamente na planilha de acompanhamento.
 
----
+## Fluxo atual
 
-## 🔧 Implementação
+1. O documento da inscricao fica salvo no PostgreSQL como `BYTEA`
+2. O backend monta uma URL publica intermediaria em `/acesso-documento/[id]`
+3. A URL e exportada para o Google Sheets
+4. O Sheets exibe o link clicavel na coluna de documento
+5. Ao acessar o link, a aplicacao redireciona para `/admin/login?next=/admin/editais?tab=pendentes` se nao houver sessao admin
+6. Com sessao valida, o acesso cai direto em `/admin/editais?tab=pendentes`
 
-### Fluxo
+## Formato da planilha
 
-1. **Armazenamento**:
-   - Documento é salvo no **PostgreSQL** (BYTEA) com hash SHA-256 para garantia jurídica
+Exemplo de celula:
 
-2. **URL Permanente**:
-   - Gera URL permanente usando endpoint da própria API: `/api/documents/{id}`
-   - Link **nunca expira** e funciona em **qualquer navegador**
-   - Documento é servido diretamente do PostgreSQL com verificação de integridade
-
-3. **Google Sheets**:
-   - Insere link clicável na coluna "Documento" usando fórmula `HYPERLINK`
-   - Revisor clica no link e visualiza o documento diretamente no navegador
-
----
-
-## 📊 Estrutura na Planilha
-
-| Coluna | Conteúdo |
-|--------|----------|
-| Documento | `=HYPERLINK("https://comunidade.innovatismc.com/api/documents/7","Ver Documento")` |
-
----
-
-## 🔐 Segurança e Características
-
-- **Link Permanente**: URL nunca expira
-- **Público**: Funciona em qualquer navegador sem autenticação
-- **Verificação de Integridade**: Hash SHA-256 verificado a cada acesso
-- **Backup Jurídico**: Documento armazenado no PostgreSQL com metadados completos
-- **Infra (Nginx)**: Para evitar truncamento de PDFs, manter `proxy_buffering off`, `proxy_request_buffering off`, `proxy_max_temp_file_size 0` e timeouts ampliados no bloco `location /` (ver `MDs/DEPLOY.md`).
-
----
-
-## 🛠️ Arquivos Envolvidos
-
-1. **`app/api/inscricoes/route.ts`**:
-   - Gera URL permanente baseada no ID da inscrição
-   - Passa URL para Google Sheets
-
-2. **`app/api/documents/[id]/route.ts`**:
-   - Serve o documento diretamente do PostgreSQL
-   - Verifica integridade via hash SHA-256
-   - Retorna com `Content-Disposition: inline` (abre no navegador)
-
-3. **`lib/google-sheets.ts`**:
-   - Aceita `document_view_url` no `RegistrationData`
-   - Cria link clicável usando fórmula `HYPERLINK`
-
----
-
-## ✅ Teste Local
-
-```bash
-# Rodar localmente
-npm run dev
-
-# Fazer uma inscrição de teste
-# Verificar na planilha se aparece link "Ver Documento"
-# Clicar e confirmar que abre o documento
-
-# Testar endpoint diretamente (substitua o ID)
-curl http://localhost:3000/api/documents/1
+```text
+=HYPERLINK("https://comunidade.innovatismc.com/acesso-documento/7","Ver documento")
 ```
 
----
+## Arquivos envolvidos
 
-## 🔄 Inscrições Existentes
+- `app/api/inscricoes/route.ts`
+- `app/acesso-documento/[id]/page.tsx`
+- `lib/google-sheets.ts`
 
-Para inscrições já feitas antes desta atualização:
-- O documento está no PostgreSQL
-- Basta acessar: `https://comunidade.innovatismc.com/api/documents/{id}`
-- Pode-se atualizar a planilha manualmente ou criar script de migração
+## Observacoes
 
----
+- o link nao expira
+- o endpoint de download direto continua existindo, mas o link exportado pela planilha usa o acesso autenticado
+- a validacao de integridade continua no endpoint publico de download direto
+- essa visibilidade existe apenas para o documento da inscricao da comunidade, nao para os arquivos do Edital
 
-**Última atualização**: 26 de Novembro de 2025
+## Teste local
 
+```powershell
+npm run dev
+curl http://localhost:3000/acesso-documento/1
+```
+
+## Se houver inscricoes antigas
+
+Se a planilha antiga nao tiver a URL do documento, basta reenviar a linha com o formato atual ou atualizar manualmente a coluna correspondente.

@@ -1,7 +1,7 @@
 # 🛠️ Nginx – PDFs truncados/corrompidos (resolução completa)
 
 ## Contexto do problema
-- Endpoint: `https://comunidade.innovatismc.com/api/documents/{id}` (serve PDFs direto do PostgreSQL).
+- Endpoint legado: `https://comunidade.innovatismc.com/api/documents/{id}` (agora exige login admin; o fluxo novo de acesso usa `/acesso-documento/{id}` antes do painel).
 - Sintoma: download parava sempre em ~32 KB; Chrome/Edge e Acrobat exibiam “Falha ao carregar o documento PDF” / “Arquivo danificado”.
 - Observação: a API retornava `200 OK` com `Content-Length: 282152` e headers de integridade (`x-document-integrity: verified`), o PDF estava íntegro no banco (BYTEA, hash válido).
 
@@ -66,5 +66,5 @@ sudo systemctl reload nginx
 
 ## Referências internas
 - `MDs/DEPLOY.md` — bloco completo do Nginx/SSL com a configuração final.
-- `MDs/VISUALIZACAO_DOCUMENTOS.md` — fluxo dos documentos (PostgreSQL + endpoint `/api/documents/{id}`) e nota de infra.
+- `MDs/VISUALIZACAO_DOCUMENTOS.md` — fluxo dos documentos (PostgreSQL + acesso autenticado via `/acesso-documento/{id}`) e nota de infra.
 
