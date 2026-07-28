@@ -89,11 +89,11 @@ export default function EditalCpfGate() {
         </h2>
         <p className="text-slate-300 mb-8">
           Para submeter uma proposta ao Edital PPI, você precisa primeiro concluir sua inscrição
-          na comunidade InnovaNation.
+          na página de pré-cadastro e depois seguir para o formulário de inscrição.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/#formulario"
+            href="/inscricao"
             className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
           >
             Fazer minha inscrição

@@ -1,11 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { User, CreditCard, Phone, Mail, MapPin, CheckCircle, Briefcase, FolderOpen, Building2, FileText, ChevronRight, X, AlertCircle, Link2, Copy } from 'lucide-react'
 import TermsModal from './TermsModal'
 import ConfettiEffect from './ConfettiEffect'
 import { fetchActiveTerms, submitRegistration, type TermsResponse } from '@/lib/api'
+import { validateCpfForEdital, EditalValidationError } from '@/lib/edital-api'
+import { setEditalSession } from '@/lib/edital-session'
 
 // Helper para eventos do Google Analytics e Meta Pixel
 const trackEvent = (eventName: string, params: Record<string, any> = {}) => {
@@ -25,7 +28,43 @@ const trackEvent = (eventName: string, params: Record<string, any> = {}) => {
   }
 };
 
-export default function RegistrationFormSection() {
+type RegistrationFormSectionProps = {
+  flowMode?: 'home' | 'edital'
+  hideIntro?: boolean
+}
+
+function triggerDownload(url: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+function getEditalHandoffErrorMessage(error: unknown) {
+  if (error instanceof EditalValidationError) {
+    if (error.reason === 'rate_limited') {
+      return 'Cadastro concluído, mas não conseguimos liberar o Edital agora porque houve muitas tentativas. Aguarde alguns minutos e tente novamente.'
+    }
+
+    if (error.reason === 'forbidden') {
+      return 'Cadastro concluído, mas a origem da requisição foi bloqueada ao tentar liberar o Edital. Tente novamente a partir da página do Edital.'
+    }
+
+    if (error.reason === 'not_found') {
+      return 'Cadastro concluído, mas ainda não conseguimos localizar sua inscrição para liberar o Edital. Aguarde alguns segundos e tente novamente.'
+    }
+
+    return 'Cadastro concluído, mas não foi possível liberar o Edital agora. Tente novamente em alguns minutos.'
+  }
+
+  return 'Cadastro concluído, mas não foi possível liberar o Edital agora. Tente novamente em alguns minutos.'
+}
+
+export default function RegistrationFormSection({ flowMode = 'home', hideIntro = false }: RegistrationFormSectionProps) {
+  const router = useRouter()
+  const isEditalFlow = flowMode === 'edital'
   const [formData, setFormData] = useState({
     nomeCompleto: '',
     profissao: '',
@@ -59,6 +98,8 @@ export default function RegistrationFormSection() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [hasShownConfetti, setHasShownConfetti] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [showEditalHandoffError, setShowEditalHandoffError] = useState(false)
+  const [editalHandoffErrorMessage, setEditalHandoffErrorMessage] = useState('')
   const [showDuplicateErrorModal, setShowDuplicateErrorModal] = useState(false)
   const [duplicateErrorMessage, setDuplicateErrorMessage] = useState('')
   const [formStarted, setFormStarted] = useState(false)
@@ -86,7 +127,7 @@ export default function RegistrationFormSection() {
 
   // Bloqueia scroll quando popup de sucesso está aberto
   useEffect(() => {
-    if (showSuccessMessage) {
+    if (showSuccessMessage || showEditalHandoffError) {
       document.body.style.overflow = 'hidden'
       document.body.style.position = 'fixed'
       document.body.style.width = '100%'
@@ -102,7 +143,7 @@ export default function RegistrationFormSection() {
       document.body.style.position = ''
       document.body.style.width = ''
     }
-  }, [showSuccessMessage])
+  }, [showSuccessMessage, showEditalHandoffError])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -547,6 +588,38 @@ export default function RegistrationFormSection() {
     }
   }
 
+  const handleEditalHandoff = async (cpfDigits: string) => {
+    const result = await validateCpfForEdital(cpfDigits, formData.website)
+    setEditalSession({ token: result.token, prefill: result.prefill })
+
+    if (result.certificateUrl) {
+      triggerDownload(result.certificateUrl)
+    }
+
+    return result
+  }
+
+  const handleRetryEditalHandoff = async () => {
+    if (isSubmitting) {
+      return
+    }
+
+    const cleanCpf = formData.cpf.replace(/\D/g, '')
+    setShowEditalHandoffError(false)
+    setEditalHandoffErrorMessage('')
+    setIsSubmitting(true)
+
+    try {
+      await handleEditalHandoff(cleanCpf)
+      setIsSubmitting(false)
+      router.push('/edital/proposta')
+    } catch (error) {
+      setIsSubmitting(false)
+      setEditalHandoffErrorMessage(getEditalHandoffErrorMessage(error))
+      setShowEditalHandoffError(true)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -598,6 +671,20 @@ export default function RegistrationFormSection() {
         city: formData.cidade,
         state: formData.estado
       });
+
+      if (isEditalFlow) {
+        try {
+          await handleEditalHandoff(formData.cpf.replace(/\D/g, ''))
+          setIsSubmitting(false)
+          router.push('/edital/proposta')
+          return
+        } catch (error) {
+          setIsSubmitting(false)
+          setEditalHandoffErrorMessage(getEditalHandoffErrorMessage(error))
+          setShowEditalHandoffError(true)
+          return
+        }
+      }
 
       setIsSubmitting(false)
 
@@ -679,6 +766,65 @@ export default function RegistrationFormSection() {
     <>
       <ConfettiEffect trigger={showConfetti} onComplete={() => setShowConfetti(false)} />
 
+      {showEditalHandoffError && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 animate-fadeIn overflow-hidden"
+          style={{
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditalHandoffError(false)
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-slate-700/60 shadow-2xl max-w-md mx-4 transform transition-all duration-500 relative z-[10000]">
+            <button
+              onClick={() => setShowEditalHandoffError(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-slate-700/50 rounded-lg transition-colors duration-200 group"
+              aria-label="Fechar mensagem"
+            >
+              <X className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+            </button>
+
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                  Cadastro concluído
+                </h3>
+                <p className="text-slate-300 text-sm sm:text-base font-normal leading-relaxed">
+                  {editalHandoffErrorMessage}
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 pt-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleRetryEditalHandoff}
+                  disabled={isSubmitting}
+                  className="flex-1 rounded-full bg-[#22AE84] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1C8C6A] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Tentar novamente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/edital')}
+                  className="flex-1 rounded-full border border-slate-700/60 px-5 py-3 text-sm font-bold text-slate-200 transition-colors hover:border-[#22AE84] hover:text-white"
+                >
+                  Voltar ao Edital
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mensagem de Sucesso com Backdrop */}
       {showSuccessMessage && (
         <div
@@ -754,21 +900,25 @@ export default function RegistrationFormSection() {
         </div>
       )}
 
-      <section id="formulario" className="relative py-24 px-4 scroll-mt-24">
+      <section
+        id="formulario"
+        className={`relative px-4 scroll-mt-24 ${hideIntro ? 'py-10 sm:py-12' : 'py-24'}`}
+      >
         <div className="max-w-4xl mx-auto">
-          {/* Título da Seção */}
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">
-              Faça a sua <span className="text-[#22AE84]">Inscrição</span> agora!
-            </h2>
-            <p className="text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed">
-              Preencha o formulário abaixo e torne-se membro da comunidade{' '}
-              <span className="text-[#22AE84]">InnovaNation</span>
-            </p>
-            <div className="mt-8 flex justify-center">
-              <div className="h-1.5 w-20 bg-[#22AE84] rounded-full opacity-20"></div>
+          {!hideIntro && (
+            <div className="text-center mb-16">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">
+                Faça a sua <span className="text-[#22AE84]">Inscrição</span> agora!
+              </h2>
+              <p className="text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed">
+                Preencha o formulário abaixo e torne-se membro da comunidade{' '}
+                <span className="text-[#22AE84]">InnovaNation</span>
+              </p>
+              <div className="mt-8 flex justify-center">
+                <div className="h-1.5 w-20 bg-[#22AE84] rounded-full opacity-20"></div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -1308,7 +1458,7 @@ export default function RegistrationFormSection() {
                 ) : (
                   <>
                     <CheckCircle className="w-6 h-6" />
-                    <span>Finalizar Inscrição</span>
+                    <span>Continuar</span>
                   </>
                 )}
               </button>

@@ -539,10 +539,9 @@ export async function POST(request: NextRequest) {
       // Executamos de forma assíncrona dentro da transação? Não, idealmente após o commit.
       // Mas como estamos dentro de uma função transaction wrapper, o commit acontece ao retornar.
       // Vamos retornar os dados necessários para executar APÓS a transação.
-      // Gera URL permanente para visualização do documento
-      // Usa a própria API como fonte (endpoint /api/documents/[id])
+      // Gera URL pública intermediária para acesso autenticado ao documento
       const baseUrl = getPublicBaseUrl(request);
-      const documentViewUrl = fileBuffer ? `${baseUrl}/api/documents/${registrationId}` : null;
+      const documentViewUrl = fileBuffer ? `${baseUrl}/acesso-documento/${registrationId}` : null;
 
       // Prepara dados completos para Google Sheets e N8N
       const completeData = {

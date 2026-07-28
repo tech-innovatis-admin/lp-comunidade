@@ -1,11 +1,33 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Lock, Loader2, AlertCircle } from 'lucide-react'
+
+const DEFAULT_NEXT_PATH = '/admin/editais?tab=pendentes'
+
+function getSafeNextPath(nextValue: string | null): string {
+  if (!nextValue) {
+    return DEFAULT_NEXT_PATH
+  }
+
+  try {
+    const parsed = new URL(nextValue, 'http://local')
+    if (parsed.origin !== 'http://local') {
+      return DEFAULT_NEXT_PATH
+    }
+
+    const candidate = `${parsed.pathname}${parsed.search}${parsed.hash}`
+    return candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : DEFAULT_NEXT_PATH
+  } catch {
+    return DEFAULT_NEXT_PATH
+  }
+}
 
 export default function AdminLoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = getSafeNextPath(searchParams.get('next'))
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -41,7 +63,7 @@ export default function AdminLoginPage() {
         return
       }
 
-      router.push('/admin/editais')
+      router.push(nextPath)
       router.refresh()
     } catch {
       setError('Não foi possível entrar agora. Tente novamente.')
