@@ -3,7 +3,7 @@ import { query, queryOne, transaction } from '@/lib/db';
 import { applyNoStore, containsDangerousInput, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
 
-type DraftStep = 'equipe' | 'instituicao' | 'proposta';
+type DraftStep = 'equipe' | 'instituicao' | 'fotos' | 'proposta';
 
 type DraftBody = {
   step?: unknown;
@@ -29,6 +29,9 @@ type SubmissionRow = {
   lab_name: string | null;
   lab_area: string | null;
   lab_served_public: string | null;
+  lab_academic_unit: string | null;
+  lab_structure_description: string | null;
+  main_improvement_objective: string | null;
   budget_items: unknown;
   technical_justification: string | null;
   expected_results: string | null;
@@ -39,7 +42,7 @@ type SubmissionRow = {
 
 const MAX_TEXT_LENGTH = 5000;
 const MAX_BUDGET_ITEMS = 20;
-const VALID_STEPS = new Set<DraftStep>(['equipe', 'instituicao', 'proposta']);
+const VALID_STEPS = new Set<DraftStep>(['equipe', 'instituicao', 'fotos', 'proposta']);
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return applyNoStore(NextResponse.json(body, init));
@@ -143,6 +146,9 @@ async function loadSubmission(registrationId: number) {
         lab_name,
         lab_area,
         lab_served_public,
+        lab_academic_unit,
+        lab_structure_description,
+        main_improvement_objective,
         budget_items,
         technical_justification,
         expected_results,
@@ -221,6 +227,9 @@ export async function GET(request: NextRequest) {
             labName: submission.lab_name,
             labArea: submission.lab_area,
             labServedPublic: submission.lab_served_public,
+            labAcademicUnit: submission.lab_academic_unit,
+            labStructureDescription: submission.lab_structure_description,
+            mainImprovementObjective: submission.main_improvement_objective,
             budgetItems: Array.isArray(submission.budget_items) ? submission.budget_items : submission.budget_items ?? null,
             technicalJustification: submission.technical_justification,
             expectedResults: submission.expected_results,
@@ -317,41 +326,58 @@ export async function POST(request: NextRequest) {
         const labName = normalizeTextInput(data.lab_name, 'lab_name');
         const labArea = normalizeTextInput(data.lab_area, 'lab_area');
         const labServedPublic = normalizeTextInput(data.lab_served_public, 'lab_served_public');
+        const labAcademicUnit = normalizeTextInput(data.lab_academic_unit, 'lab_academic_unit');
 
         await client.query(
           `
             INSERT INTO edital_submissions (
-              registration_id, institution_name, institution_cnpj, lab_name, lab_area, lab_served_public
+              registration_id, institution_name, institution_cnpj, lab_name, lab_area, lab_served_public, lab_academic_unit
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (registration_id) DO UPDATE
             SET institution_name = EXCLUDED.institution_name,
                 institution_cnpj = EXCLUDED.institution_cnpj,
                 lab_name = EXCLUDED.lab_name,
                 lab_area = EXCLUDED.lab_area,
                 lab_served_public = EXCLUDED.lab_served_public,
+                lab_academic_unit = EXCLUDED.lab_academic_unit,
                 updated_at = NOW()
           `,
-          [registrationId, institutionName, institutionCnpj, labName, labArea, labServedPublic]
+          [registrationId, institutionName, institutionCnpj, labName, labArea, labServedPublic, labAcademicUnit]
+        );
+      } else if (step === 'fotos') {
+        const labStructureDescription = normalizeTextInput(data.lab_structure_description, 'lab_structure_description');
+
+        await client.query(
+          `
+            INSERT INTO edital_submissions (registration_id, lab_structure_description)
+            VALUES ($1, $2)
+            ON CONFLICT (registration_id) DO UPDATE
+            SET lab_structure_description = EXCLUDED.lab_structure_description,
+                updated_at = NOW()
+          `,
+          [registrationId, labStructureDescription]
         );
       } else if (step === 'proposta') {
         const budgetItems = normalizeBudgetItems(data.budget_items);
         const technicalJustification = normalizeTextInput(data.technical_justification, 'technical_justification');
         const expectedResults = normalizeTextInput(data.expected_results, 'expected_results');
+        const mainImprovementObjective = normalizeTextInput(data.main_improvement_objective, 'main_improvement_objective');
 
         await client.query(
           `
             INSERT INTO edital_submissions (
-              registration_id, budget_items, technical_justification, expected_results
+              registration_id, budget_items, technical_justification, expected_results, main_improvement_objective
             )
-            VALUES ($1, $2, $3, $4)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (registration_id) DO UPDATE
             SET budget_items = EXCLUDED.budget_items,
                 technical_justification = EXCLUDED.technical_justification,
                 expected_results = EXCLUDED.expected_results,
+                main_improvement_objective = EXCLUDED.main_improvement_objective,
                 updated_at = NOW()
           `,
-          [registrationId, budgetItems ? JSON.stringify(budgetItems) : null, technicalJustification, expectedResults]
+          [registrationId, budgetItems ? JSON.stringify(budgetItems) : null, technicalJustification, expectedResults, mainImprovementObjective]
         );
       }
 
