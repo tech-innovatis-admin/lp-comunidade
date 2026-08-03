@@ -5,7 +5,11 @@ import { Users, Building2, FileText, Camera, FileCheck, Award, ArrowLeft } from 
 import { query, queryOne } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
 import { EDITAL_DOCUMENT_LABELS, EDITAL_STEP_BY_DOCUMENT_CODE } from '@/lib/edital-completeness'
-import { EDITAL_REQUIRED_DOCUMENT_CODES, EDITAL_PHOTO_DOCUMENT_CODE } from '@/lib/edital-requirements'
+import {
+  EDITAL_REQUIRED_DOCUMENT_CODES,
+  EDITAL_PHOTO_DOCUMENT_CODE,
+  EDITAL_PHOTOS_PDF_DOCUMENT_CODE,
+} from '@/lib/edital-requirements'
 import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
 import ThumbnailCard from '@/app/components/admin/ThumbnailCard'
 import SubmissionActions from '@/app/components/admin/SubmissionActions'
@@ -177,6 +181,7 @@ export default async function AdminEditalDetailPage({
     documentsByCode.set(doc.requirement_code, list)
   }
 
+  const photosPdf = documentsByCode.get(EDITAL_PHOTOS_PDF_DOCUMENT_CODE)?.[0] ?? null
   const photos = documentsByCode.get(EDITAL_PHOTO_DOCUMENT_CODE) || []
 
   const evaluation =
@@ -304,11 +309,18 @@ export default async function AdminEditalDetailPage({
         </Block>
 
         <Block title="Fotos do laboratório" icon={<Camera className="w-5 h-5" />}>
-          <DocumentGrid codes={getDocumentCodesForStep('fotos')} documentsByCode={documentsByCode} />
-          {photos.length === 0 ? (
-            <p className="text-slate-500 mt-4">Nenhuma foto enviada</p>
+          {photosPdf ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <ThumbnailCard
+                thumbnailUrl={`/api/editais/documento/${photosPdf.id}/thumbnail`}
+                openUrl={`/api/editais/documento/${photosPdf.id}/link`}
+                label={photosPdf.original_filename || 'Registro fotográfico (PDF)'}
+              />
+            </div>
+          ) : photos.length === 0 ? (
+            <p className="text-slate-500">Nenhuma foto enviada</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {photos.map((photo) => (
                 <ThumbnailCard
                   key={photo.id}

@@ -65,6 +65,7 @@ export const EDITAL_DOCUMENT_LABELS: Record<string, string> = {
   '8.1.5': 'Comprovante de CNPJ da instituição',
   '8.1.6': 'Carta de anuência da instituição',
   '8.1.7': 'Documento de identificação do laboratório',
+  '8.1.8': 'Registro fotográfico do laboratório (PDF)',
   '8.1.15': 'Declaração de responsabilidade',
   '8.1.16': 'Termo de compromisso de contrapartida',
 };
@@ -89,6 +90,7 @@ export const EDITAL_STEP_BY_DOCUMENT_CODE: Record<string, string> = {
   '8.1.5': 'instituicao',
   '8.1.6': 'instituicao',
   '8.1.7': 'instituicao',
+  '8.1.8': 'fotos',
   '8.1.15': 'declaracoes',
   '8.1.16': 'declaracoes',
 };

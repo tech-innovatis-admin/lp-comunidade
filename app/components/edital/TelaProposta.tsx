@@ -92,6 +92,7 @@ export default function TelaProposta({
           rows={4}
           value={mainImprovementObjective}
           onChange={(e) => onMainImprovementObjectiveChange(e.target.value.slice(0, EDITAL_MAX_TEXT_LENGTH))}
+          placeholder="Ex.: modernizar bancadas e instrumentação para ampliar a capacidade de pesquisa aplicada"
           className={textareaClass}
         />
         <p className="mt-1 text-xs text-slate-500 text-right">

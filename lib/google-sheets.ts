@@ -170,7 +170,8 @@ interface EditalSubmissionData {
   // Link permanente (via /api/editais/documento/[id]/link) por código de requisito.
   // Ausente no mapa = documento não enviado.
   documentLinks: Record<string, string>;
-  // Fotos do laboratório: múltiplos links, um por foto enviada.
+  // Fotos do laboratório: após o envio, link do PDF único (8.1.8).
+  // Propostas antigas podem ter vários links de fotos individuais.
   photoLinks: string[];
   // Link permanente (via /api/editais/certificado/[registrationId]/link), ou null
   // se o certificado ainda não foi gerado para essa inscrição.
@@ -185,6 +186,7 @@ const EDITAL_DOCUMENT_COLUMN_LABELS: Record<string, string> = {
   '8.1.5': 'Comprovante de CNPJ',
   '8.1.6': 'Carta de anuência da instituição',
   '8.1.7': 'Identificação do laboratório',
+  '8.1.8': 'Registro fotográfico (PDF)',
   '8.1.15': 'Declaração de responsabilidade',
   '8.1.16': 'Termo de compromisso de contrapartida',
 };

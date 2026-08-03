@@ -3,7 +3,8 @@ import { query, queryOne, transaction } from '@/lib/db';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
 import { generateParticipationTermPdf } from '@/lib/edital-pdf';
-import { uploadFile } from '@/lib/s3';
+import { generateLabPhotosPdf } from '@/lib/edital-photos-pdf';
+import { deleteFile, getFileBytes, uploadFile } from '@/lib/s3';
 import { calculateFileHash } from '@/lib/utils';
 import { appendEditalSubmissionToSheet } from '@/lib/google-sheets';
 import { getPublicBaseUrl } from '@/lib/public-url';
@@ -11,6 +12,7 @@ import {
   EDITAL_AUTO_GENERATED_DOCUMENT_CODE,
   EDITAL_MIN_PHOTO_COUNT,
   EDITAL_PHOTO_DOCUMENT_CODE,
+  EDITAL_PHOTOS_PDF_DOCUMENT_CODE,
   getSubmissionRequiredDocumentCodes,
 } from '@/lib/edital-requirements';
 
@@ -63,6 +65,13 @@ type RegistrationRow = {
   email: string;
   cpf: string;
   created_at: Date;
+};
+
+type PhotoDocumentRow = {
+  id: number;
+  s3_key: string;
+  thumbnail_s3_key: string | null;
+  mime_type: string;
 };
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -198,9 +207,51 @@ export async function POST(request: NextRequest) {
       return jsonResponse({ error: 'Cadastro não encontrado' }, { status: 404 });
     }
 
+    // Fotos individuais → PDF único (8.1.8), fora da transação (I/O S3), como o termo.
+    const photoDocs = await query<PhotoDocumentRow>(
+      `
+        SELECT id, s3_key, thumbnail_s3_key, mime_type
+        FROM edital_submission_documents
+        WHERE submission_id = $1
+          AND requirement_code = $2
+        ORDER BY uploaded_at ASC, id ASC
+      `,
+      [preSubmission.id, EDITAL_PHOTO_DOCUMENT_CODE]
+    );
+
+    if (photoDocs.length < EDITAL_MIN_PHOTO_COUNT) {
+      return jsonResponse(
+        {
+          error: 'incomplete',
+          missing: [
+            {
+              type: 'photo',
+              required: EDITAL_MIN_PHOTO_COUNT,
+              found: photoDocs.length,
+            },
+          ],
+        },
+        { status: 400 }
+      );
+    }
+
+    const photoBuffers = await Promise.all(
+      photoDocs.map(async (doc) => ({
+        bytes: await getFileBytes(doc.s3_key),
+        mimeType: doc.mime_type,
+      }))
+    );
+
+    const photosPdfBuffer = await generateLabPhotosPdf(photoBuffers);
+    const photosPdfHash = calculateFileHash(photosPdfBuffer);
+    const photosPdfUpload = await uploadFile(
+      photosPdfBuffer,
+      `fotos-laboratorio-${preSubmission.id}.pdf`,
+      'application/pdf',
+      `edital-submissions/${preSubmission.id}`
+    );
+
     // Gera o Termo de Comprovação de Participação (PDF) e envia para o S3.
-    // Ocorre fora da transação de banco, no mesmo padrão do upload de documentos
-    // em app/api/editais/proposta/documento/route.ts.
     const pdfBuffer = await generateParticipationTermPdf({
       fullName: registration.full_name,
       cpf: registration.cpf,
@@ -267,6 +318,40 @@ export async function POST(request: NextRequest) {
         return { status: 'incomplete' as const, missing };
       }
 
+      const photosPdfRows = (await client.query(
+        `
+          INSERT INTO edital_submission_documents (
+            submission_id,
+            requirement_code,
+            s3_key,
+            file_hash,
+            mime_type,
+            size_bytes,
+            original_filename
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id
+        `,
+        [
+          submission.id,
+          EDITAL_PHOTOS_PDF_DOCUMENT_CODE,
+          photosPdfUpload.filePath,
+          photosPdfHash,
+          'application/pdf',
+          photosPdfBuffer.length,
+          `fotos-laboratorio-${submission.id}.pdf`,
+        ]
+      )) as { rows: Array<{ id: number }> };
+
+      await client.query(
+        `
+          DELETE FROM edital_submission_documents
+          WHERE submission_id = $1
+            AND requirement_code = $2
+        `,
+        [submission.id, EDITAL_PHOTO_DOCUMENT_CODE]
+      );
+
       const termDocumentRows = (await client.query(
         `
           INSERT INTO edital_submission_documents (
@@ -304,14 +389,22 @@ export async function POST(request: NextRequest) {
         [submission.id]
       )) as { rows: Array<{ submitted_at: Date }> };
 
+      const remainingDocs = documentRows.rows.filter(
+        (row) => row.requirement_code !== EDITAL_PHOTO_DOCUMENT_CODE
+      );
+
       return {
         status: 'ok' as const,
         submission,
         submittedAt: updateRows.rows[0].submitted_at,
         documents: [
-          ...documentRows.rows,
+          ...remainingDocs,
+          { id: photosPdfRows.rows[0].id, requirement_code: EDITAL_PHOTOS_PDF_DOCUMENT_CODE },
           { id: termDocumentRows.rows[0].id, requirement_code: EDITAL_AUTO_GENERATED_DOCUMENT_CODE },
         ],
+        photoS3KeysToDelete: photoDocs.flatMap((doc) =>
+          [doc.s3_key, doc.thumbnail_s3_key].filter((key): key is string => Boolean(key))
+        ),
       };
     });
 
@@ -325,6 +418,13 @@ export async function POST(request: NextRequest) {
 
     const submittedAtIso = result.submittedAt.toISOString();
 
+    // Best-effort: remove fotos individuais (e thumbs) do S3 após o commit.
+    for (const key of result.photoS3KeysToDelete) {
+      deleteFile(key).catch((error) => {
+        console.error(`[edital-proposta-enviar] Falha ao apagar foto S3 ${key}:`, error);
+      });
+    }
+
     // Links permanentes (via rotas de redirecionamento, nunca expiram do ponto de
     // vista de quem os usa) para a planilha de acompanhamento do time interno.
     const baseUrl = getPublicBaseUrl(request);
@@ -333,10 +433,9 @@ export async function POST(request: NextRequest) {
 
     for (const doc of result.documents) {
       const link = `${baseUrl}/api/editais/documento/${doc.id}/link`;
-      if (doc.requirement_code === EDITAL_PHOTO_DOCUMENT_CODE) {
+      documentLinks[doc.requirement_code] = link;
+      if (doc.requirement_code === EDITAL_PHOTOS_PDF_DOCUMENT_CODE) {
         photoLinks.push(link);
-      } else {
-        documentLinks[doc.requirement_code] = link;
       }
     }
 

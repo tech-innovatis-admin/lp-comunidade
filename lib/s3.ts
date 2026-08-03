@@ -3,7 +3,7 @@
  * Gerencia upload de documentos de identidade
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
 
@@ -86,6 +86,15 @@ export async function getFileBytes(filePath: string): Promise<Buffer> {
   }
 
   return Buffer.from(bytes);
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: filePath,
+    })
+  );
 }
 
 export function isValidFileType(mimeType: string): boolean {
