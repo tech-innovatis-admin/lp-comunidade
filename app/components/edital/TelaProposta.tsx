@@ -11,6 +11,8 @@ import {
 } from '@/lib/edital-requirements'
 
 interface TelaPropostaProps {
+  mainImprovementObjective: string
+  onMainImprovementObjectiveChange: (value: string) => void
   budgetItems: EditalBudgetItem[]
   onBudgetItemsChange: (items: EditalBudgetItem[]) => void
   technicalJustification: string
@@ -26,6 +28,8 @@ const textareaClass =
   'w-full px-6 py-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#22AE84]/30 focus:border-[#22AE84] transition-all font-medium resize-none'
 
 export default function TelaProposta({
+  mainImprovementObjective,
+  onMainImprovementObjectiveChange,
   budgetItems,
   onBudgetItemsChange,
   technicalJustification,
@@ -72,6 +76,26 @@ export default function TelaProposta({
         <h2 className="text-xl font-bold text-white mb-2">Proposta</h2>
         <p className="text-slate-400">
           Plano de aplicação dos recursos, justificativa técnica e resultados esperados.
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="main_improvement_objective" className="block text-sm font-bold text-slate-100 mb-3 ml-1">
+          Objetivo principal da melhoria pretendida
+        </label>
+        <p className="text-sm text-slate-400 mb-3 ml-1">
+          Informe, de forma clara e objetiva, qual é a principal melhoria que se pretende alcançar no laboratório
+          por meio do patrocínio.
+        </p>
+        <textarea
+          id="main_improvement_objective"
+          rows={4}
+          value={mainImprovementObjective}
+          onChange={(e) => onMainImprovementObjectiveChange(e.target.value.slice(0, EDITAL_MAX_TEXT_LENGTH))}
+          className={textareaClass}
+        />
+        <p className="mt-1 text-xs text-slate-500 text-right">
+          {mainImprovementObjective.length}/{EDITAL_MAX_TEXT_LENGTH}
         </p>
       </div>
 

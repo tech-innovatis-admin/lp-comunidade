@@ -21,7 +21,10 @@ interface SubmissionDetailRow {
   institution_cnpj: string | null
   lab_name: string | null
   lab_area: string | null
+  lab_academic_unit: string | null
+  lab_structure_description: string | null
   lab_served_public: string | null
+  main_improvement_objective: string | null
   budget_items: Array<{ descricao: string; justificativa: string; valor_estimado: number }> | null
   technical_justification: string | null
   expected_results: string | null
@@ -45,7 +48,8 @@ async function loadSubmission(id: number): Promise<SubmissionDetailRow | null> {
   return queryOne<SubmissionDetailRow>(
     `SELECT s.id, s.registration_id, s.status, r.full_name, r.cpf,
             s.team_description, s.institution_name, s.institution_cnpj,
-            s.lab_name, s.lab_area, s.lab_served_public, s.budget_items,
+            s.lab_name, s.lab_area, s.lab_academic_unit, s.lab_structure_description,
+            s.lab_served_public, s.main_improvement_objective, s.budget_items,
             s.technical_justification, s.expected_results, s.submitted_at,
             s.evaluation_scores, s.evaluation_total_score, s.evaluated_by, s.evaluated_at,
             s.disqualified_at, s.disqualified_reason, s.disqualified_by
@@ -259,6 +263,11 @@ export default async function AdminEditalDetailPage({
               value={`${submission.institution_name || '—'} (${submission.institution_cnpj || 'CNPJ não informado'})`}
             />
             <Field label="Laboratório" value={`${submission.lab_name || '—'} — ${submission.lab_area || '—'}`} />
+            <Field label="Unidade acadêmica" value={submission.lab_academic_unit || '—'} />
+            <Field
+              label="Descrição da estrutura do laboratório"
+              value={submission.lab_structure_description || '—'}
+            />
             <Field label="Público atendido pelo laboratório" value={submission.lab_served_public || '—'} />
           </dl>
           <DocumentGrid codes={getDocumentCodesForStep('instituicao')} documentsByCode={documentsByCode} />
@@ -266,6 +275,10 @@ export default async function AdminEditalDetailPage({
 
         <Block title="Proposta" icon={<FileText className="w-5 h-5" />}>
           <dl className="space-y-4">
+            <Field
+              label="Objetivo principal da melhoria"
+              value={submission.main_improvement_objective || '—'}
+            />
             <Field label="Justificativa técnica" value={submission.technical_justification || '—'} />
             <Field label="Resultados esperados" value={submission.expected_results || '—'} />
             <div>

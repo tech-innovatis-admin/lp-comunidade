@@ -160,6 +160,9 @@ interface EditalSubmissionData {
   institutionCnpj: string | null;
   labName: string | null;
   labArea: string | null;
+  labAcademicUnit: string | null;
+  labStructureDescription: string | null;
+  mainImprovementObjective: string | null;
   teamDescription: string | null;
   technicalJustification: string | null;
   expectedResults: string | null;
@@ -182,7 +185,6 @@ const EDITAL_DOCUMENT_COLUMN_LABELS: Record<string, string> = {
   '8.1.5': 'Comprovante de CNPJ',
   '8.1.6': 'Carta de anuência da instituição',
   '8.1.7': 'Identificação do laboratório',
-  '8.1.9': 'Planta/layout do espaço físico',
   '8.1.15': 'Declaração de responsabilidade',
   '8.1.16': 'Termo de compromisso de contrapartida',
 };
@@ -212,10 +214,11 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
     const communityCertificateCell = submission.communityCertificateUrl || 'Não gerado';
 
     // Ordem das colunas: ID, Data de exportação, ID da Inscrição, Status, Nome, CPF,
-    // Instituição, CNPJ, Laboratório, Área do Laboratório, Descrição da Equipe,
-    // Justificativa Técnica, Resultados Esperados, Data de Envio, [10 documentos
-    // obrigatórios em ordem fixa], Fotos do laboratório, Termo de Comprovação de
-    // Participação, Certificado de Inscrição na Comunidade.
+    // Instituição, CNPJ, Laboratório, Área do Laboratório, Unidade acadêmica,
+    // Descrição da estrutura do laboratório, Objetivo principal da melhoria,
+    // Descrição da Equipe, Justificativa Técnica, Resultados Esperados, Data de Envio,
+    // [documentos obrigatórios em ordem fixa], Fotos do laboratório, Termo de Comprovação
+    // de Participação, Certificado de Inscrição na Comunidade.
     const values = [
       [
         submission.id,
@@ -228,6 +231,9 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
         submission.institutionCnpj || '',
         submission.labName || '',
         submission.labArea || '',
+        submission.labAcademicUnit || '',
+        submission.labStructureDescription || '',
+        submission.mainImprovementObjective || '',
         submission.teamDescription || '',
         submission.technicalJustification || '',
         submission.expectedResults || '',
@@ -245,7 +251,7 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
     // dados de proposta do Edital com dados de inscrição.
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: 'PROPOSTAS!A:AA',
+      range: 'PROPOSTAS!A:AC',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values,
@@ -272,6 +278,9 @@ export function getEditalSheetHeaderRow(): string[] {
     'CNPJ',
     'Laboratório',
     'Área do Laboratório',
+    'Unidade acadêmica',
+    'Descrição da estrutura do laboratório',
+    'Objetivo principal da melhoria',
     'Descrição da Equipe',
     'Justificativa Técnica',
     'Resultados Esperados',

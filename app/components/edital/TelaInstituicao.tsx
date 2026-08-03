@@ -9,6 +9,7 @@ export type TelaInstituicaoField =
   | 'institutionName'
   | 'institutionCnpj'
   | 'labName'
+  | 'labAcademicUnit'
   | 'labArea'
   | 'labServedPublic'
 
@@ -17,6 +18,7 @@ interface TelaInstituicaoProps {
   institutionName: string
   institutionCnpj: string
   labName: string
+  labAcademicUnit: string
   labArea: string
   labServedPublic: string
   onFieldChange: (field: TelaInstituicaoField, value: string) => void
@@ -38,6 +40,7 @@ export default function TelaInstituicao({
   institutionName,
   institutionCnpj,
   labName,
+  labAcademicUnit,
   labArea,
   labServedPublic,
   onFieldChange,
@@ -89,6 +92,18 @@ export default function TelaInstituicao({
             type="text"
             value={labName}
             onChange={(e) => onFieldChange('labName', e.target.value)}
+            className={inputClass}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label htmlFor="lab_academic_unit" className="block text-sm font-bold text-slate-100 mb-3 ml-1">
+            Unidade acadêmica, centro, núcleo ou setor ao qual o laboratório está vinculado
+          </label>
+          <input
+            id="lab_academic_unit"
+            type="text"
+            value={labAcademicUnit}
+            onChange={(e) => onFieldChange('labAcademicUnit', e.target.value.slice(0, EDITAL_MAX_TEXT_LENGTH))}
             className={inputClass}
           />
         </div>

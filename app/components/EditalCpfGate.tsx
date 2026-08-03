@@ -190,7 +190,9 @@ export default function EditalCpfGate() {
         />
       </div>
 
-      <h2 className="text-xl font-bold text-white mb-2">Edital PPI 2026</h2>
+      <h2 className="text-xl font-bold text-white mb-2 leading-snug">
+        EDITAL N.º 01/2026 – APOIO AO FORTALECIMENTO DE AMBIENTES DE INOVAÇÃO PARA MODERNIZAÇÃO DE LABORATÓRIOS DE ENSINO, PESQUISA E INOVAÇÃO DO PLANO DE PATROCÍNIO INNOVATIS – PPI 2026
+      </h2>
       <p className="text-slate-400 mb-8">
         Informe o CPF usado na sua inscrição da comunidade InnovaNation para continuar.
       </p>
