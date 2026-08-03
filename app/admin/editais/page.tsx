@@ -178,15 +178,18 @@ export default async function AdminEditaisPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
+  const { tab: tabParam } = await searchParams
+  const tab: Tab = tabParam === 'ranking' || tabParam === 'rejeitadas' ? tabParam : 'pendentes'
+
+  const nextPath =
+    tab === 'ranking' || tab === 'rejeitadas' ? `/admin/editais?tab=${tab}` : '/admin/editais'
+
   const cookieStore = await cookies()
   const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
 
   if (!verifyAdminSessionToken(token)) {
-    redirect('/admin/login')
+    redirect('/admin/login?next=' + encodeURIComponent(nextPath))
   }
-
-  const { tab: tabParam } = await searchParams
-  const tab: Tab = tabParam === 'ranking' || tabParam === 'rejeitadas' ? tabParam : 'pendentes'
 
   return (
     <main className="flex-1 relative z-10 min-h-screen px-4 py-16">

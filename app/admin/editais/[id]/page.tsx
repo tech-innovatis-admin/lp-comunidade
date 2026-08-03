@@ -154,18 +154,18 @@ export default async function AdminEditalDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
-
-  if (!verifyAdminSessionToken(token)) {
-    redirect('/admin/login')
-  }
-
   const { id } = await params
   const submissionId = Number.parseInt(id, 10)
 
   if (!Number.isFinite(submissionId)) {
     notFound()
+  }
+
+  const cookieStore = await cookies()
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
+
+  if (!verifyAdminSessionToken(token)) {
+    redirect('/admin/login?next=' + encodeURIComponent(`/admin/editais/${id}`))
   }
 
   const submission = await loadSubmission(submissionId)

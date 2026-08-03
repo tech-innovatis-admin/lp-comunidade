@@ -476,6 +476,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             ...sheetPayload,
             email: registration.email,
+            adminReviewUrl: `${baseUrl}/admin/editais/${result.submission.id}`,
             source: 'edital-proposta',
           }),
         });
