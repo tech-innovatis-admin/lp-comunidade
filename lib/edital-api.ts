@@ -21,7 +21,6 @@ export interface EditalValidationSuccess {
   token: string;
   alreadySubmitted: boolean;
   submittedAt: string | null;
-  certificateUrl: string | null;
   prefill: EditalPrefill;
 }
 

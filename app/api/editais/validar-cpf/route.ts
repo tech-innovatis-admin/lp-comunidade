@@ -2,8 +2,8 @@
  * POST /api/editais/validar-cpf
  * Valida se um CPF corresponde a uma inscrição confirmada na comunidade InnovaNation
  * (registrations.terms_accepted = TRUE) antes de liberar o formulário do Edital PPI.
- * Também gera (uma única vez) e devolve o Certificado de Inscrição na Comunidade,
- * usado pelo time interno para validar a inscrição — independente do Edital PPI.
+ * Também gera (uma única vez) o Certificado de Inscrição na Comunidade no S3,
+ * para uso interno (admin/Sheets) — sem expor download ao usuário no gate.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,7 +11,7 @@ import { query, queryOne } from '@/lib/db';
 import { calculateFileHash, calculateHash, isValidCPF } from '@/lib/utils';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { createEditalToken } from '@/lib/edital-auth';
-import { getSignedFileUrl, uploadFileToKey } from '@/lib/s3';
+import { uploadFileToKey } from '@/lib/s3';
 import { generateCommunityCertificatePdf } from '@/lib/community-certificate-pdf';
 
 interface RegistrationRow {
@@ -99,12 +99,9 @@ export async function POST(request: NextRequest) {
     const registrationId = Number(registration.id);
     const token = createEditalToken(registrationId);
 
-    // O Certificado de Inscrição na Comunidade depende só do cadastro confirmado
-    // (já garantido pela query acima), não de submissão de proposta ao Edital.
-    // Gerado uma única vez e reaproveitado nas validações seguintes.
-    let certificateS3Key = registration.community_certificate_s3_key;
-
-    if (!certificateS3Key) {
+    // Certificado de Inscrição na Comunidade: gerado uma vez no S3 para uso interno
+    // (admin/Sheets). Não é exposto ao usuário neste endpoint.
+    if (!registration.community_certificate_s3_key) {
       const certificatePdf = await generateCommunityCertificatePdf({
         fullName: registration.full_name,
         cpf: cleanCpf,
@@ -124,15 +121,7 @@ export async function POST(request: NextRequest) {
          WHERE id = $3`,
         [upload.filePath, certificateHash, registrationId]
       );
-
-      certificateS3Key = upload.filePath;
     }
-
-    const certificateUrl = await getSignedFileUrl(
-      certificateS3Key,
-      900,
-      'certificado-inscricao-innovanation.pdf'
-    );
 
     // Reaproveitado só pela UX do wizard, para não exigir reenvio de proposta já
     // enviada ao Edital — não tem relação com o certificado de inscrição acima.
@@ -149,7 +138,6 @@ export async function POST(request: NextRequest) {
       token,
       alreadySubmitted: Boolean(submittedSubmission),
       submittedAt: submittedSubmission?.submitted_at ?? null,
-      certificateUrl,
       prefill: {
         fullName: registration.full_name,
         email: registration.email,
