@@ -50,6 +50,7 @@ export default function TelaFotos({
           rows={6}
           value={labStructureDescription}
           onChange={(e) => onLabStructureDescriptionChange(e.target.value.slice(0, EDITAL_MAX_TEXT_LENGTH))}
+          placeholder="Ex.: área física disponível, equipamentos principais, infraestrutura de rede/energia e limitações atuais"
           className={textareaClass}
         />
         <p className="mt-1 text-xs text-slate-500 text-right">
