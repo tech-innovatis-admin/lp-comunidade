@@ -22,6 +22,9 @@ export interface EditalSubmission {
   institutionCnpj: string | null;
   labName: string | null;
   labArea: string | null;
+  labAcademicUnit: string | null;
+  labStructureDescription: string | null;
+  mainImprovementObjective: string | null;
   labServedPublic: string | null;
   budgetItems: EditalBudgetItem[] | null;
   technicalJustification: string | null;
@@ -38,6 +41,9 @@ export interface EditalWizardData {
   institutionCnpj: string;
   labName: string;
   labArea: string;
+  labAcademicUnit: string;
+  labStructureDescription: string;
+  mainImprovementObjective: string;
   labServedPublic: string;
   budgetItems: EditalBudgetItem[];
   technicalJustification: string;
@@ -50,6 +56,9 @@ export const EMPTY_WIZARD_DATA: EditalWizardData = {
   institutionCnpj: '',
   labName: '',
   labArea: '',
+  labAcademicUnit: '',
+  labStructureDescription: '',
+  mainImprovementObjective: '',
   labServedPublic: '',
   budgetItems: [],
   technicalJustification: '',
@@ -63,6 +72,9 @@ export function submissionToWizardData(submission: EditalSubmission): EditalWiza
     institutionCnpj: submission.institutionCnpj ?? '',
     labName: submission.labName ?? '',
     labArea: submission.labArea ?? '',
+    labAcademicUnit: submission.labAcademicUnit ?? '',
+    labStructureDescription: submission.labStructureDescription ?? '',
+    mainImprovementObjective: submission.mainImprovementObjective ?? '',
     labServedPublic: submission.labServedPublic ?? '',
     budgetItems: submission.budgetItems ?? [],
     technicalJustification: submission.technicalJustification ?? '',
@@ -70,7 +82,7 @@ export function submissionToWizardData(submission: EditalSubmission): EditalWiza
   };
 }
 
-export type EditalDraftStep = 'equipe' | 'instituicao' | 'proposta';
+export type EditalDraftStep = 'equipe' | 'instituicao' | 'fotos' | 'proposta';
 
 export type EditalMissingItem =
   | { type: 'document'; requirementCode: string }
