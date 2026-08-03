@@ -37,6 +37,7 @@ const STEPS: Array<{ key: WizardStep; label: string }> = [
 const DRAFT_STEP_BY_WIZARD_STEP: Partial<Record<WizardStep, EditalDraftStep>> = {
   equipe: 'equipe',
   instituicao: 'instituicao',
+  fotos: 'fotos',
   proposta: 'proposta',
 }
 
@@ -53,12 +54,17 @@ function buildStepPayload(step: EditalDraftStep, data: EditalWizardData): Record
       lab_name: data.labName,
       lab_area: data.labArea,
       lab_served_public: data.labServedPublic,
+      lab_academic_unit: data.labAcademicUnit,
     }
+  }
+  if (step === 'fotos') {
+    return { lab_structure_description: data.labStructureDescription }
   }
   return {
     budget_items: data.budgetItems,
     technical_justification: data.technicalJustification,
     expected_results: data.expectedResults,
+    main_improvement_objective: data.mainImprovementObjective,
   }
 }
 
@@ -246,6 +252,7 @@ export default function EditalPropostaWizard() {
           institutionName={data.institutionName}
           institutionCnpj={data.institutionCnpj}
           labName={data.labName}
+          labAcademicUnit={data.labAcademicUnit}
           labArea={data.labArea}
           labServedPublic={data.labServedPublic}
           onFieldChange={(field: TelaInstituicaoField, value: string) =>
@@ -261,6 +268,10 @@ export default function EditalPropostaWizard() {
       {currentStep === 'fotos' && token && (
         <TelaFotos
           token={token}
+          labStructureDescription={data.labStructureDescription}
+          onLabStructureDescriptionChange={(value) =>
+            setData((prev) => ({ ...prev, labStructureDescription: value }))
+          }
           documents={documents}
           onDocumentUploaded={handleDocumentUploaded}
           onDocumentRemoved={handleDocumentRemoved}
@@ -270,6 +281,10 @@ export default function EditalPropostaWizard() {
 
       {currentStep === 'proposta' && (
         <TelaProposta
+          mainImprovementObjective={data.mainImprovementObjective}
+          onMainImprovementObjectiveChange={(value) =>
+            setData((prev) => ({ ...prev, mainImprovementObjective: value }))
+          }
           budgetItems={data.budgetItems}
           onBudgetItemsChange={(items) => setData((prev) => ({ ...prev, budgetItems: items }))}
           technicalJustification={data.technicalJustification}
