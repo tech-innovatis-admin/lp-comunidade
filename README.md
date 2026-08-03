@@ -1,76 +1,66 @@
-# 🏢 Landing Page Comunidade InnovaNation
+# Landing Page Comunidade InnovaNation
 
-**Status**: ✅ **EM PRODUÇÃO**  
-**URL**: https://comunidade.innovatismc.com  
-**Último Deploy**: 27 de Novembro de 2025  
+Status: em producao
+URL: https://comunidade.innovatismc.com
 
-Landing page completa para comunidade InnovaNation com:
-- ✅ Formulário de inscrição com validação completa
-- ✅ Upload de documentos de identidade
-- ✅ Integração PostgreSQL + Google Sheets
-- ✅ Validação de email e CPF únicos
-- ✅ **Webhook N8N automático** para processamento de dados
-- ✅ Deploy Docker ARM64 no EC2 t4g.micro
+Projeto Next.js 15 para a comunidade InnovaNation, com dois fluxos principais:
 
-## 🚀 Deploy Rápido
+- Landing page publica com formulario de inscricao
+- Rota dedicada `/inscricao` como comunicado de pre-cadastro
+- Rota `/inscricao/formulario` para concluir o cadastro antes do Edital
+- Fluxo do Edital PPI, com gate por CPF, wizard de proposta e painel admin
 
-### Build e Push para ECR
+## O que o sistema faz hoje
+
+- Recebe inscricoes em `/api/inscricoes`
+- Valida CPF, email, origem, tamanho de payload, assinatura de arquivo e termos ativos
+- Armazena documento de identidade no PostgreSQL como `BYTEA`, com hash SHA-256
+- Envia os dados da inscricao para Google Sheets e webhook N8N, de forma best-effort
+- Exibe o link de documento por `/acesso-documento/[id]`, com redirecionamento para login do admin e retorno para `/admin/editais?tab=pendentes`
+- Libera o fluxo do Edital em `/edital`, com token de sessao assinado a partir do CPF validado
+- Oferece `/inscricao` como pagina de pre-cadastro e `/inscricao/formulario` como pagina do formulario
+- Mantem painel admin em `/admin/editais` para avaliacao e desqualificacao de propostas
+
+## Estrutura resumida
+
+- `app/` - rotas, paginas e componentes React
+- `lib/` - banco, seguranca, Google Sheets, S3, utilitarios e auth
+- `database/` - migrations SQL e termo ativo
+- `scripts/` - automacoes de setup, migracao e manutencao
+- `ps1/` - scripts PowerShell para Windows
+- `MDs/` - documentacao tecnica do projeto
+
+## Scripts principais
 
 ```powershell
-.\ps1\build-e-push-local.ps1
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run migrate
+npm run update-term-v1.0
 ```
 
-### Deploy no EC2
+## Documentacao principal
 
-Conecte no EC2 e execute:
+- [MDs/README.md](MDs/README.md)
+- [MDs/INDICE_DOCUMENTACAO.md](MDs/INDICE_DOCUMENTACAO.md)
+- [MDs/BACKEND.md](MDs/BACKEND.md)
+- [MDs/DEPLOY.md](MDs/DEPLOY.md)
+- [MDs/SEGURANCA_JURIDICA.md](MDs/SEGURANCA_JURIDICA.md)
+- [MDs/VISUALIZACAO_DOCUMENTOS.md](MDs/VISUALIZACAO_DOCUMENTOS.md)
 
-```bash
-cd /home/ec2-user/landing-page-innovatis
-./scripts/deploy.sh
-```
+## Tecnologias
 
-## 📁 Estrutura do Projeto
+- Next.js 15, React 19, TypeScript, Tailwind CSS 4
+- PostgreSQL, `pg`
+- Google Sheets API
+- AWS S3
+- n8n webhook
+- Docker ARM64 para EC2
 
-- `app/` - Aplicação Next.js (rotas, componentes, API)
-- `lib/` - Bibliotecas e utilitários (DB, S3, Google Sheets)
-- `database/` - Migrações SQL e termos de uso
-- `scripts/` - Scripts de deploy e manutenção
-  - `troubleshooting/` - Scripts de diagnóstico
-- `ps1/` - Scripts PowerShell para Windows
-- `MDs/` - Documentação do projeto
+## Observacoes
 
-## 🔧 Scripts Principais
-
-### PowerShell (Windows)
-- `ps1/build-e-push-local.ps1` - Build e push para ECR
-- `ps1/upload-para-ec2.ps1` - Upload código para EC2
-- `ps1/corrigir-permissoes-final.ps1` - Corrigir permissões SSH
-
-### Bash (EC2)
-- `scripts/deploy.sh` - Deploy do container
-- `scripts/build-and-push-ec2.sh` - Build no EC2
-- `scripts/setup-ec2-build.sh` - Setup inicial do EC2
-
-## 📚 Documentação
-
-Consulte a pasta `MDs/` para documentação completa (inclui ajustes de Nginx para evitar truncamento de PDFs):
-- `MDs/README.md` - Visão geral
-- `MDs/BACKEND.md` - Documentação do backend
-- `MDs/DEPLOY_RAPIDO_LOCAL.md` - Guia de deploy
-- `MDs/DEPLOY.md` - Configuração completa (Nginx/SSL) e troubleshooting de PDFs
-
-## 🛠️ Tecnologias
-
-- **Frontend**: Next.js 15, React, Tailwind CSS, TypeScript
-- **Backend**: Next.js API Routes, PostgreSQL (RDS), Node.js ARM64
-- **Infra**: Docker ARM64, AWS ECR/EC2 t4g, Nginx, Let's Encrypt SSL
-- **Integrações**: Google Sheets API, AWS SDK v3, **N8N Webhook**
-- **Validações**: Email único, CPF único, Documentos obrigatórios
-- **Segurança**: Hash SHA-256, Armazenamento BYTEA PostgreSQL
-
-## 🌐 URLs
-
-- **Produção:** https://comunidade.innovatismc.com
-- **Health Check:** https://comunidade.innovatismc.com/api/health
-- **Webhook N8N:** `https://v1teste.app.n8n.cloud/webhook/kriscia-comunidade`
-
+- O fluxo legado de WhatsApp nao faz parte do fluxo ativo.
+- As variaveis legadas relacionadas a WhatsApp estao marcadas como deprecated em `env.example`.
+- O arquivo `MDs/DEPLOY_RAPIDO_LOCAL.md` nao existe mais; use `MDs/DEPLOY.md`.

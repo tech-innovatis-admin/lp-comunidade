@@ -8,6 +8,7 @@ import { queryOne, query, transaction } from '@/lib/db';
 import { isValidFileType, isValidFileSize } from '@/lib/s3';
 import { calculateHash, calculateFileHash, generateSecureToken, isValidCPF, isValidEmail, getClientIP } from '@/lib/utils';
 import { appendRegistrationToSheet } from '@/lib/google-sheets';
+import { getPublicBaseUrl } from '@/lib/public-url';
 import {
   applyNoStore,
   containsDangerousInput,
@@ -538,10 +539,9 @@ export async function POST(request: NextRequest) {
       // Executamos de forma assíncrona dentro da transação? Não, idealmente após o commit.
       // Mas como estamos dentro de uma função transaction wrapper, o commit acontece ao retornar.
       // Vamos retornar os dados necessários para executar APÓS a transação.
-      // Gera URL permanente para visualização do documento
-      // Usa a própria API como fonte (endpoint /api/documents/[id])
-      const baseUrl = process.env.PUBLIC_BASE_URL || 'https://comunidade.innovatismc.com';
-      const documentViewUrl = fileBuffer ? `${baseUrl}/api/documents/${registrationId}` : null;
+      // Gera URL pública intermediária para acesso autenticado ao documento
+      const baseUrl = getPublicBaseUrl(request);
+      const documentViewUrl = fileBuffer ? `${baseUrl}/acesso-documento/${registrationId}` : null;
 
       // Prepara dados completos para Google Sheets e N8N
       const completeData = {
@@ -619,6 +619,7 @@ export async function POST(request: NextRequest) {
 
     return jsonResponse({
       status: 'ok',
+      documentViewUrl: result.registrationData.document_view_url,
     });
   } catch (error) {
     console.error('Erro ao processar inscrição:', error);

@@ -41,6 +41,7 @@ yarn-error.log*
 
 # Claude Code local state (worktrees, settings)
 /.claude/
+/.worktrees/
 
 # typescript
 *.tsbuildinfo

@@ -1,43 +1,52 @@
-# 🚀 Guia de Deploy - Landing Page Comunidade InnovaNation
+# Guia de Deploy - Landing Page Comunidade InnovaNation
 
-**Status**: ✅ **EM PRODUÇÃO**  
-**URL**: https://comunidade.innovatismc.com  
-**Último Deploy**: 27 de Novembro de 2025  
-**Imagem ECR**: 891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest  
-**Porta**: 3002
+Status: em producao
+URL: https://comunidade.innovatismc.com
 
----
+## Arquitetura de operacao
 
-## 📋 Resumo da Arquitetura
+- Next.js 15 rodando em Docker ARM64
+- EC2 com Nginx como reverse proxy
+- PostgreSQL RDS para dados transacionais
+- Google Sheets para acompanhamento operacional
+- webhook N8N para automacoes
 
-- **Aplicação**: Next.js 15 (ARM64)
-- **Container**: Docker no EC2 t4g.micro (porta 3002)
-- **Banco**: PostgreSQL (RDS AWS)
-- **Storage**: S3 para credenciais Google
-- **Integração**: Google Sheets para tracking + **N8N Webhook automático**
-- **Proxy**: Nginx com SSL (Let's Encrypt)
-- **Validação**: Email e CPF únicos
-
----
-
-## 🚀 Deploy Rápido (Recomendado)
-
-### 1. Build e Push Local (PowerShell)
+## Build local no Windows
 
 ```powershell
-cd "C:\Users\campp\OneDrive\Área de Trabalho\v1 - ENTERPRISE\PLATAFORMAS\LP COMUNIDADE\landing-page-innovatis"
-.\ps1\build-e-push-local.ps1
+cd "C:\caminho\do\repositorio\lp-comunidade"
+npm install
+npm run build
 ```
 
-### 2. Deploy no EC2
+Se o fluxo de deploy local for via ECR, use o script existente em `ps1/`.
+
+## Variaveis de ambiente
+
+No ambiente de producao, confirme pelo menos:
+
+- banco principal: `DB_*`
+- S3: `AWS_*`
+- Google Sheets: `GOOGLE_*`
+- URL publica: `PUBLIC_BASE_URL`
+- webhook: `WEBHOOK_N8N_URL`
+- healthcheck: `HEALTHCHECK_TOKEN`
+- admin: `ADMIN_TOKEN_SECRET`
+- edital: `EDITAL_TOKEN_SECRET`
+- base compartilhada de usuarios: `PLATFORMS_DB_*`
+
+## Deploy no EC2
+
+1. Enviar a imagem para o registry configurado
+2. Fazer pull da nova imagem no EC2
+3. Substituir o container em execucao
+4. Validar health check
+5. Conferir logs de app e Nginx
+
+Exemplo de execucao:
 
 ```bash
-# Conectar no EC2
-ssh -i "hub-innovatis-keypair.pem" ec2-user@44.214.214.210
-
-# Pull da nova imagem e reiniciar container
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 891612552945.dkr.ecr.us-east-1.amazonaws.com
-docker pull 891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest
+docker pull <registry>/landing-comunidade-innovatis:latest
 docker stop landing-comunidade
 docker rm landing-comunidade
 docker run -d \
@@ -45,180 +54,77 @@ docker run -d \
   --restart unless-stopped \
   --env-file /home/ec2-user/landing-comunidade.env \
   -p 3002:3002 \
-  891612552945.dkr.ecr.us-east-1.amazonaws.com/landing-comunidade-innovatis:latest
-
-# Verificar
-docker ps
+  <registry>/landing-comunidade-innovatis:latest
 curl http://localhost:3002/api/health
 ```
 
----
+## Nginx
 
-## 🔧 Configuração Inicial (Primeira vez)
+O reverse proxy precisa preservar downloads binarios e documentos PDF.
 
-### Arquivo de Variáveis de Ambiente no EC2
+Configuracao recomendada no `location /`:
 
-```bash
-cat > /home/ec2-user/landing-comunidade.env << 'EOF'
-NODE_ENV=production
-PORT=3002
-DB_HOST=
-DB_PORT=5432
-DB_NAME=landing_page_comunidade
-DB_USER=
-DB_PASSWORD=
-DB_SSL=true
-DATABASE_URL=
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_S3_BUCKET_NAME=innovanation-documents
-GOOGLE_CREDENTIALS_S3_BUCKET=
-GOOGLE_CREDENTIALS_S3_KEY=
-GOOGLE_CREDENTIALS_S3_REGION=us-east-2
-GOOGLE_SHEET_NAME=InnovaNation - Inscrições Comunidade
-PUBLIC_BASE_URL=https://comunidade.innovatismc.com
-EOF
-```
+- `proxy_buffering off`
+- `proxy_request_buffering off`
+- `proxy_max_temp_file_size 0`
+- `proxy_read_timeout` e `proxy_send_timeout` altos
 
-### Configuração Nginx
-
-**⚠️ IMPORTANTE**: Ajustes para evitar truncamento de PDFs (observamos corte em ~32KB por renegociação SSL). Use esta configuração no arquivo `/etc/nginx/conf.d/landing-comunidade.conf` (Certbot já gerencia os blocos de SSL, mantenha-os):
+Exemplo:
 
 ```nginx
-server {
-    server_name comunidade.innovatismc.com;
-
-    access_log /var/log/nginx/comunidade-access.log;
-    error_log  /var/log/nginx/comunidade-error.log;
-
-    # Limite de upload (10MB)
-    client_max_body_size 10M;
-
-    location / {
-        proxy_pass http://127.0.0.1:3002;
-        proxy_http_version 1.1;
-
-        # Headers básicos
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-
-        # CRÍTICO: evitar truncamento/renegociação em downloads binários
-        proxy_buffering off;
-        proxy_request_buffering off;
-        proxy_max_temp_file_size 0;
-
-        # Timeouts ampliados para downloads maiores
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 300s;
-        proxy_read_timeout 300s;
-
-        # HTTP/1.1 estável
-        proxy_set_header Connection "";
-    }
-
-    listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/comunidade.innovatismc.com/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/comunidade.innovatismc.com/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-}
-
-server {
-    if ($host = comunidade.innovatismc.com) {
-        return 301 https://$host$request_uri;
-    } # managed by Certbot
-
-    listen 80;
-    server_name comunidade.innovatismc.com;
-    return 404; # managed by Certbot
+location / {
+    proxy_pass http://127.0.0.1:3002;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_max_temp_file_size 0;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
 }
 ```
 
-Depois de editar:
+Depois de ajustar:
+
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-#### Troubleshooting rápido (PDF cortando/corrompido)
-- Sintoma: download para em ~32KB e o PDF abre corrompido no navegador/Acrobat.
-- Causa: renegociação/fechamento prematuro na cadeia SSL com buffering habilitado.
-- Solução: garantir `proxy_buffering off`, `proxy_request_buffering off`, `proxy_max_temp_file_size 0` e timeouts ampliados conforme acima. Validar com `curl -v -o /tmp/teste.pdf https://comunidade.innovatismc.com/api/documents/ID` (tamanho esperado ~282 KB nos casos testados).
+## Health check
 
-### SSL com Certbot
+Rota: `GET /api/health`
 
-```bash
-sudo certbot --nginx -d comunidade.innovatismc.com
-```
+Observacao:
 
----
+- a rota responde apenas para request interna ou quando recebe `x-health-token`
+- o retorno valida banco, S3 e termo ativo
 
-## 🔧 Comandos Úteis (EC2)
+## Troubleshooting
 
-```bash
-# Ver containers rodando
-docker ps
+### PDF truncado ou corrompido
 
-# Ver logs em tempo real
-docker logs -f landing-comunidade
+- conferir buffering do Nginx
+- testar o endpoint direto na app, sem proxy
+- validar o tamanho do arquivo com `curl`
 
-# Parar container
-docker stop landing-comunidade
+### Container nao sobe
 
-# Reiniciar container
-docker restart landing-comunidade
+- verificar logs do container
+- confirmar variaveis obrigatorias
+- confirmar porta 3002 livre
 
-# Ver uso de recursos
-docker stats landing-comunidade
+### Health check falha
 
-# Health check
-curl http://localhost:3002/api/health
+- validar conexao com banco
+- validar acesso ao bucket S3
+- validar termo ativo no banco
 
-# Ver logs do Nginx
-sudo tail -f /var/log/nginx/error.log
-```
+## Observacoes operacionais
 
----
-
-## 🆘 Troubleshooting
-
-### Container não inicia
-```bash
-docker logs landing-comunidade
-sudo netstat -tlnp | grep 3002
-```
-
-### Nginx não funciona
-```bash
-sudo nginx -t
-sudo tail -f /var/log/nginx/error.log
-```
-
-### Verificar certificados SSL
-```bash
-sudo certbot certificates
-```
-
----
-
-## 📊 Informações do Ambiente
-
-| Componente | Valor |
-|------------|-------|
-| EC2 IP | 44.214.214.210 |
-| Porta Interna (app) | 3002 |
-| Nginx (host) | 80 (HTTP) / 443 (HTTPS) → proxy_pass para `127.0.0.1:3002` |
-| ECR Registry | 891612552945.dkr.ecr.us-east-1.amazonaws.com |
-| Imagem | landing-comunidade-innovatis:latest |
-| RDS Host | xxxxxx.ci1kcsyewm34.us-east-1.rds.amazonaws.com |
-| Database | xxxxxxx |
-| S3 Docs | innovanation-documents |
-| S3 Creds | jsoninnovatis |
-| Google Sheet | InnovaNation - Inscrições Comunidade |
-
+- Nao coloque segredos ou valores reais no documento
+- Sempre valide `npm run build` antes do deploy
+- Quando mudar env ou porta, atualize este guia e o `env.example`

@@ -2,13 +2,17 @@
  * POST /api/editais/validar-cpf
  * Valida se um CPF corresponde a uma inscrição confirmada na comunidade InnovaNation
  * (registrations.terms_accepted = TRUE) antes de liberar o formulário do Edital PPI.
+ * Também gera (uma única vez) o Certificado de Inscrição na Comunidade no S3,
+ * para uso interno (admin/Sheets) — sem expor download ao usuário no gate.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne } from '@/lib/db';
-import { calculateHash, isValidCPF } from '@/lib/utils';
+import { query, queryOne } from '@/lib/db';
+import { calculateFileHash, calculateHash, isValidCPF } from '@/lib/utils';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { createEditalToken } from '@/lib/edital-auth';
+import { uploadFileToKey } from '@/lib/s3';
+import { generateCommunityCertificatePdf } from '@/lib/community-certificate-pdf';
 
 interface RegistrationRow {
   id: number;
@@ -23,6 +27,12 @@ interface RegistrationRow {
   address_neighborhood: string | null;
   address_city: string | null;
   address_state: string | null;
+  created_at: Date;
+  community_certificate_s3_key: string | null;
+}
+
+interface SubmittedSubmissionRow {
+  submitted_at: Date;
 }
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -71,7 +81,7 @@ export async function POST(request: NextRequest) {
     const registration = await queryOne<RegistrationRow>(
       `SELECT id, full_name, email, phone, profession, organization,
               address_zip, address_street, address_number, address_neighborhood,
-              address_city, address_state
+              address_city, address_state, created_at, community_certificate_s3_key
        FROM registrations
        WHERE cpf = $1 AND terms_accepted = TRUE
        LIMIT 1`,
@@ -86,11 +96,48 @@ export async function POST(request: NextRequest) {
     // registrations.id é BIGSERIAL; o driver pg retorna colunas BIGINT como string
     // (sem type parser customizado para OID 20 neste projeto), então normalizamos
     // explicitamente para number antes de embutir no payload assinado do token.
-    const token = createEditalToken(Number(registration.id));
+    const registrationId = Number(registration.id);
+    const token = createEditalToken(registrationId);
+
+    // Certificado de Inscrição na Comunidade: gerado uma vez no S3 para uso interno
+    // (admin/Sheets). Não é exposto ao usuário neste endpoint.
+    if (!registration.community_certificate_s3_key) {
+      const certificatePdf = await generateCommunityCertificatePdf({
+        fullName: registration.full_name,
+        cpf: cleanCpf,
+        registrationId,
+        registrationDate: registration.created_at,
+      });
+
+      const certificateHash = calculateFileHash(certificatePdf);
+      const certificateKey = `community-certificates/${registrationId}.pdf`;
+      const upload = await uploadFileToKey(certificatePdf, certificateKey, 'application/pdf');
+
+      await query(
+        `UPDATE registrations
+         SET community_certificate_s3_key = $1,
+             community_certificate_hash = $2,
+             community_certificate_generated_at = NOW()
+         WHERE id = $3`,
+        [upload.filePath, certificateHash, registrationId]
+      );
+    }
+
+    // Reaproveitado só pela UX do wizard, para não exigir reenvio de proposta já
+    // enviada ao Edital — não tem relação com o certificado de inscrição acima.
+    const submittedSubmission = await queryOne<SubmittedSubmissionRow>(
+      `SELECT submitted_at
+       FROM edital_submissions
+       WHERE registration_id = $1 AND status = 'SUBMITTED'
+       LIMIT 1`,
+      [registrationId]
+    );
 
     return jsonResponse({
       ok: true,
       token,
+      alreadySubmitted: Boolean(submittedSubmission),
+      submittedAt: submittedSubmission?.submitted_at ?? null,
       prefill: {
         fullName: registration.full_name,
         email: registration.email,

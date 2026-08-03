@@ -1,96 +1,68 @@
-# 🗄️ Instruções para Criar Banco de Dados
+# Instrucoes para Criar o Banco
 
-> ⚠️ **IMPORTANTE**: Antes de executar qualquer comando, certifique-se de que o arquivo `.env` está configurado com as variáveis de ambiente corretas (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, etc.).
+## Antes de comecar
 
-## Opção 1: Via pgAdmin (Recomendado)
+Confirme que o `.env` principal esta configurado com `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `DB_NAME`.
 
-1. **Abra o pgAdmin**
-2. **Conecte ao servidor**
-3. **Clique com botão direito** no banco `` (banco padrão)
-4. **Selecione**: Query Tool
-5. **Execute o script**: `database/migrations/000_create_database.sql`
-6. **Ou execute diretamente**:
-   ```sql
-   CREATE DATABASE landing_page_comunidade;
-   ```
+## Opcao 1: pgAdmin
 
-## Opção 2: Via psql (Linha de Comando)
+1. Abra o pgAdmin
+2. Conecte ao servidor PostgreSQL
+3. Crie o banco `landing_page_comunidade`
+4. Execute as migrations em ordem
+
+## Opcao 2: psql
 
 ```powershell
-# Conecte ao banco postgres
 $env:PGPASSWORD="$env:DB_PASSWORD"
 psql -h $env:DB_HOST -U $env:DB_USER -d postgres -c "CREATE DATABASE landing_page_comunidade;"
 ```
 
-## Opção 3: Via Script TypeScript
+## Opcao 3: script local
 
-**Execute no diretório do projeto:**
 ```powershell
 npx tsx scripts/create-database.ts
 ```
 
----
+## Depois de criar o banco
 
-## ✅ Após Criar o Banco
-
-### 1. Atualize o .env
-
-Edite o arquivo `.env` e altere:
-
-```env
-DB_NAME=landing_page_comunidade
-```
-
-E também atualize o `DATABASE_URL`:
-
-```env
-DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME"
-```
-
-### 2. Execute as Migrations
-
-Depois de criar o banco e atualizar o `.env`, execute:
+1. Ajuste `DB_NAME=landing_page_comunidade`
+2. Confirme `DATABASE_URL`
+3. Rode o setup de banco
 
 ```powershell
 npx tsx scripts/setup-database.ts
 ```
 
-Este script irá:
-- ✅ Criar as tabelas (`terms_of_use`, `registrations`, `registration_invites`)
-- ✅ Inserir o termo inicial (v1.0)
-- ✅ Verificar se tudo está funcionando
+## O que o setup cria
 
----
+- `terms_of_use`
+- `registrations`
+- `edital_submissions`
+- `edital_submission_documents`
+- views de apoio
 
-## 📋 Checklist
+Observacao: `registration_invites` pode aparecer em migrations antigas, mas nao faz parte do fluxo atual.
 
-- [ ] Banco `landing_page_comunidade` criado
-- [ ] `.env` atualizado com `DB_NAME=landing_page_comunidade`
-- [ ] `.env` atualizado com `DATABASE_URL` correto
-- [ ] Migrations executadas (`npx tsx scripts/setup-database.ts`)
-- [ ] Tabelas criadas e verificadas
+## Checklist
 
----
+- [ ] banco criado
+- [ ] `.env` atualizado
+- [ ] migrations executadas
+- [ ] termo ativo inserido
+- [ ] tabelas principais conferidas
 
-## 🔍 Verificar se Funcionou
-
-Execute no pgAdmin ou psql:
+## Verificacao rapida
 
 ```sql
--- Conecte ao banco landing_page_comunidade
 \c landing_page_comunidade
 
--- Verificar tabelas
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public';
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
 
--- Deve retornar:
--- terms_of_use
--- registrations  
--- registration_invites
-
--- Verificar termo inserido
-SELECT id, version, title, is_active FROM terms_of_use;
+SELECT id, version, title, is_active
+FROM terms_of_use
+ORDER BY id;
 ```
-

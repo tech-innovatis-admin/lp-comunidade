@@ -4,10 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { validateCpfForEdital, EditalValidationError } from '@/lib/edital-api'
+import { setEditalSession } from '@/lib/edital-session'
 
 type GateState = 'idle' | 'validating' | 'blocked' | 'granted'
-
-const SESSION_KEY = 'edital_session'
 
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')
@@ -15,6 +14,7 @@ export default function EditalCpfGate() {
   const [website, setWebsite] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [welcomeName, setWelcomeName] = useState('')
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false)
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '')
@@ -38,8 +38,9 @@ export default function EditalCpfGate() {
 
     try {
       const result = await validateCpfForEdital(cpf, website)
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, prefill: result.prefill }))
+      setEditalSession({ token: result.token, prefill: result.prefill })
       setWelcomeName(result.prefill.fullName)
+      setAlreadySubmitted(result.alreadySubmitted)
       setState('granted')
     } catch (error) {
       if (error instanceof EditalValidationError && error.reason === 'not_found') {
@@ -52,7 +53,7 @@ export default function EditalCpfGate() {
       } else if (error instanceof EditalValidationError && error.reason === 'invalid_cpf') {
         setErrorMessage('CPF inválido. Confira os números e tente novamente.')
       } else {
-        setErrorMessage('Não foi possível validar seu CPF agora. Tente novamente em instantes.')
+        setErrorMessage('Não foi possível validar seu CPF agora. Tente novamente daqui a pouco.')
       }
       setState('idle')
     }
@@ -73,11 +74,11 @@ export default function EditalCpfGate() {
         </h2>
         <p className="text-slate-300 mb-8">
           Para submeter uma proposta ao Edital PPI, você precisa primeiro concluir sua inscrição
-          na comunidade InnovaNation.
+          na página de pré-cadastro e depois seguir para o formulário de inscrição.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/#formulario"
+            href="/inscricao"
             className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
           >
             Fazer minha inscrição
@@ -94,6 +95,28 @@ export default function EditalCpfGate() {
     )
   }
 
+  if (state === 'granted' && alreadySubmitted) {
+    return (
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-slate-800 shadow-2xl text-center">
+        <CheckCircle2 className="w-12 h-12 text-[#22AE84] mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-3">
+          Bem-vindo(a) de volta, {welcomeName}!
+        </h2>
+        <p className="text-slate-300 mb-8">
+          Sua proposta ao Edital PPI já foi enviada. Você não precisa enviá-la novamente.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href="/edital/proposta"
+            className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
+          >
+            Ver minha proposta
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   if (state === 'granted') {
     return (
       <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-slate-800 shadow-2xl text-center">
@@ -102,16 +125,17 @@ export default function EditalCpfGate() {
           Bem-vindo(a), {welcomeName}!
         </h2>
         <p className="text-slate-300 mb-8">
-          Seu cadastro na comunidade InnovaNation foi confirmado. As próximas etapas do
-          formulário do Edital PPI estarão disponíveis em breve.
+          Seu cadastro na comunidade InnovaNation foi confirmado. Continue para preencher
+          o formulário de submissão da proposta ao Edital PPI.
         </p>
-        <button
-          type="button"
-          disabled
-          className="px-6 py-4 bg-slate-700 text-slate-400 rounded-2xl font-bold cursor-not-allowed"
-        >
-          Continuar
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href="/edital/proposta"
+            className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
+          >
+            Continuar
+          </Link>
+        </div>
       </div>
     )
   }
@@ -131,7 +155,9 @@ export default function EditalCpfGate() {
         />
       </div>
 
-      <h2 className="text-xl font-bold text-white mb-2">Edital PPI 2026</h2>
+      <h2 className="text-xl font-bold text-white mb-2 leading-snug">
+        EDITAL N.º 01/2026 – APOIO AO FORTALECIMENTO DE AMBIENTES DE INOVAÇÃO PARA MODERNIZAÇÃO DE LABORATÓRIOS DE ENSINO, PESQUISA E INOVAÇÃO DO PLANO DE PATROCÍNIO INNOVATIS – PPI 2026
+      </h2>
       <p className="text-slate-400 mb-8">
         Informe o CPF usado na sua inscrição da comunidade InnovaNation para continuar.
       </p>

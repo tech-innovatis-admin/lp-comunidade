@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { getLetterheadImageBytes } from './letterhead';
 
 export type ParticipationTermInput = {
   fullName: string;
@@ -71,6 +72,15 @@ export async function generateParticipationTermPdf(input: ParticipationTermInput
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const margin = 48;
   const contentWidth = page.getWidth() - margin * 2;
+
+  const letterheadBytes = await getLetterheadImageBytes();
+  const letterheadImage = await pdfDoc.embedPng(letterheadBytes);
+  page.drawImage(letterheadImage, {
+    x: 0,
+    y: 0,
+    width: page.getWidth(),
+    height: page.getHeight(),
+  });
 
   page.drawText('Termo de Comprovação de Participação', {
     x: margin,

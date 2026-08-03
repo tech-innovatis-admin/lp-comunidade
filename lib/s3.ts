@@ -3,7 +3,7 @@
  * Gerencia upload de documentos de identidade
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as crypto from 'crypto';
 
@@ -20,7 +20,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
 
 const s3Client = new S3Client(s3Config);
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'innovanation-documents';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'innovanation-documents-aws';
 
 export async function uploadFile(
   file: Buffer,
@@ -56,13 +56,45 @@ export async function uploadFileToKey(
   return { filePath, url };
 }
 
-export async function getSignedFileUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
+export async function getSignedFileUrl(
+  filePath: string,
+  expiresIn: number = 3600,
+  downloadFileName?: string
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: filePath,
+    ...(downloadFileName
+      ? { ResponseContentDisposition: `attachment; filename="${downloadFileName}"` }
+      : {}),
+  });
+
+  return await getSignedUrl(s3Client, command, { expiresIn });
+}
+
+export async function getFileBytes(filePath: string): Promise<Buffer> {
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: filePath,
   });
 
-  return await getSignedUrl(s3Client, command, { expiresIn });
+  const response = await s3Client.send(command);
+  const bytes = await response.Body?.transformToByteArray();
+
+  if (!bytes) {
+    throw new Error(`Arquivo vazio ou não encontrado no S3: ${filePath}`);
+  }
+
+  return Buffer.from(bytes);
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: filePath,
+    })
+  );
 }
 
 export function isValidFileType(mimeType: string): boolean {

@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { EDITAL_REQUIRED_DOCUMENT_CODES, EDITAL_AUTO_GENERATED_DOCUMENT_CODE } from './edital-requirements';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
@@ -147,6 +148,150 @@ async function getSheetId(auth: any, sheetNameOrId?: string): Promise<string> {
   }
 
   throw new Error('GOOGLE_SHEET_ID ou nome da planilha não configurado');
+}
+
+interface EditalSubmissionData {
+  id: number;
+  registrationId: number;
+  status: 'DRAFT' | 'SUBMITTED';
+  fullName: string;
+  cpf: string;
+  institutionName: string | null;
+  institutionCnpj: string | null;
+  labName: string | null;
+  labArea: string | null;
+  labAcademicUnit: string | null;
+  labStructureDescription: string | null;
+  mainImprovementObjective: string | null;
+  teamDescription: string | null;
+  technicalJustification: string | null;
+  expectedResults: string | null;
+  submittedAt: string;
+  // Link permanente (via /api/editais/documento/[id]/link) por código de requisito.
+  // Ausente no mapa = documento não enviado.
+  documentLinks: Record<string, string>;
+  // Fotos do laboratório: após o envio, link do PDF único (8.1.8).
+  // Propostas antigas podem ter vários links de fotos individuais.
+  photoLinks: string[];
+  // Link permanente (via /api/editais/certificado/[registrationId]/link), ou null
+  // se o certificado ainda não foi gerado para essa inscrição.
+  communityCertificateUrl: string | null;
+}
+
+const EDITAL_DOCUMENT_COLUMN_LABELS: Record<string, string> = {
+  '8.1.1': 'Documento de identificação',
+  '8.1.2': 'CPF do responsável',
+  '8.1.3': 'Comprovante de vínculo institucional',
+  '8.1.4': 'Currículo',
+  '8.1.5': 'Comprovante de CNPJ',
+  '8.1.6': 'Carta de anuência da instituição',
+  '8.1.7': 'Identificação do laboratório',
+  '8.1.8': 'Registro fotográfico (PDF)',
+  '8.1.15': 'Declaração de responsabilidade',
+  '8.1.16': 'Termo de compromisso de contrapartida',
+};
+
+// Ordem fixa de colunas de documentos, além dos códigos obrigatórios: fotos e o
+// Termo de Comprovação de Participação (gerado automaticamente no envio).
+const EDITAL_DOCUMENT_COLUMN_CODES = [...EDITAL_REQUIRED_DOCUMENT_CODES];
+
+export async function appendEditalSubmissionToSheet(submission: EditalSubmissionData) {
+  try {
+    // Obtém autenticação
+    const auth = await getGoogleAuth();
+
+    // Obtém ID da planilha (por ID ou nome)
+    const sheetId = await getSheetId(auth, process.env.GOOGLE_SHEET_NAME);
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const documentColumns = EDITAL_DOCUMENT_COLUMN_CODES.map(
+      (code) => submission.documentLinks[code] || 'Não enviado'
+    );
+    const photosCell = submission.photoLinks.length > 0
+      ? submission.photoLinks.join('\n')
+      : 'Não enviado';
+    const participationTermCell =
+      submission.documentLinks[EDITAL_AUTO_GENERATED_DOCUMENT_CODE] || 'Não gerado';
+    const communityCertificateCell = submission.communityCertificateUrl || 'Não gerado';
+
+    // Ordem das colunas: ID, Data de exportação, ID da Inscrição, Status, Nome, CPF,
+    // Instituição, CNPJ, Laboratório, Área do Laboratório, Unidade acadêmica,
+    // Descrição da estrutura do laboratório, Objetivo principal da melhoria,
+    // Descrição da Equipe, Justificativa Técnica, Resultados Esperados, Data de Envio,
+    // [documentos obrigatórios em ordem fixa], Fotos do laboratório, Termo de Comprovação
+    // de Participação, Certificado de Inscrição na Comunidade.
+    const values = [
+      [
+        submission.id,
+        new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+        submission.registrationId,
+        submission.status,
+        submission.fullName,
+        submission.cpf,
+        submission.institutionName || '',
+        submission.institutionCnpj || '',
+        submission.labName || '',
+        submission.labArea || '',
+        submission.labAcademicUnit || '',
+        submission.labStructureDescription || '',
+        submission.mainImprovementObjective || '',
+        submission.teamDescription || '',
+        submission.technicalJustification || '',
+        submission.expectedResults || '',
+        submission.submittedAt,
+        ...documentColumns,
+        photosCell,
+        participationTermCell,
+        communityCertificateCell,
+      ],
+    ];
+
+    // Escreve especificamente na aba "PROPOSTAS" — sem fallback para a primeira aba
+    // como em appendRegistrationToSheet, porque aqui a primeira aba é "INSCRIÇÃO
+    // COMUNIDADE " (dados de inscrição, colunas diferentes); cair nela misturaria
+    // dados de proposta do Edital com dados de inscrição.
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: sheetId,
+      range: 'PROPOSTAS!A:AC',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values,
+      },
+    });
+
+    console.log(`✅ Google Sheets: Proposta do Edital #${submission.id} exportada com sucesso.`);
+  } catch (error) {
+    console.error('❌ Google Sheets: Erro ao exportar proposta do Edital:', error);
+    // Não lançamos o erro para não prejudicar a experiência do usuário
+    // O dado já está salvo no banco de dados com segurança
+  }
+}
+
+export function getEditalSheetHeaderRow(): string[] {
+  return [
+    'ID',
+    'Data de exportação',
+    'ID da Inscrição',
+    'Status',
+    'Nome',
+    'CPF',
+    'Instituição',
+    'CNPJ',
+    'Laboratório',
+    'Área do Laboratório',
+    'Unidade acadêmica',
+    'Descrição da estrutura do laboratório',
+    'Objetivo principal da melhoria',
+    'Descrição da Equipe',
+    'Justificativa Técnica',
+    'Resultados Esperados',
+    'Data de Envio',
+    ...EDITAL_DOCUMENT_COLUMN_CODES.map((code) => EDITAL_DOCUMENT_COLUMN_LABELS[code]),
+    'Fotos do Laboratório',
+    'Termo de Comprovação de Participação',
+    'Certificado de Inscrição na Comunidade',
+  ];
 }
 
 export async function appendRegistrationToSheet(registration: RegistrationData) {

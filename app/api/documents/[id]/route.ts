@@ -1,12 +1,14 @@
 /**
  * GET /api/documents/:id
  * Endpoint seguro para download de documentos de identidade
- * Retorna documento armazenado no PostgreSQL com verificação de integridade
+ * Agora exige sessão admin; links públicos devem usar /acesso-documento/[id]
+ * para chegar ao login e à aba de pendências.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { calculateFileHash } from '@/lib/utils';
+import { ADMIN_SESSION_COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-auth';
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +22,14 @@ export async function GET(
       return NextResponse.json(
         { error: 'ID de inscrição inválido' },
         { status: 400 }
+      );
+    }
+
+    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+    if (!verifyAdminSessionToken(token)) {
+      return NextResponse.redirect(
+        new URL(`/admin/login?next=${encodeURIComponent(`/api/documents/${registrationId}`)}`, request.url),
+        { status: 307 }
       );
     }
 
