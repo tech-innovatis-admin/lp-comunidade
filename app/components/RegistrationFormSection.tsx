@@ -33,15 +33,6 @@ type RegistrationFormSectionProps = {
   hideIntro?: boolean
 }
 
-function triggerDownload(url: string) {
-  const link = document.createElement('a')
-  link.href = url
-  link.rel = 'noopener noreferrer'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
 function getEditalHandoffErrorMessage(error: unknown) {
   if (error instanceof EditalValidationError) {
     if (error.reason === 'rate_limited') {
@@ -591,11 +582,6 @@ export default function RegistrationFormSection({ flowMode = 'home', hideIntro =
   const handleEditalHandoff = async (cpfDigits: string) => {
     const result = await validateCpfForEdital(cpfDigits, formData.website)
     setEditalSession({ token: result.token, prefill: result.prefill })
-
-    if (result.certificateUrl) {
-      triggerDownload(result.certificateUrl)
-    }
-
     return result
   }
 

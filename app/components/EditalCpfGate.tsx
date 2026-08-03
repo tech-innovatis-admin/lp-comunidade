@@ -8,15 +8,6 @@ import { setEditalSession } from '@/lib/edital-session'
 
 type GateState = 'idle' | 'validating' | 'blocked' | 'granted'
 
-function triggerDownload(url: string) {
-  const link = document.createElement('a')
-  link.href = url
-  link.rel = 'noopener noreferrer'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')
   const [cpf, setCpf] = useState('')
@@ -24,7 +15,6 @@ export default function EditalCpfGate() {
   const [errorMessage, setErrorMessage] = useState('')
   const [welcomeName, setWelcomeName] = useState('')
   const [alreadySubmitted, setAlreadySubmitted] = useState(false)
-  const [certificateUrl, setCertificateUrl] = useState<string | null>(null)
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '')
@@ -51,12 +41,7 @@ export default function EditalCpfGate() {
       setEditalSession({ token: result.token, prefill: result.prefill })
       setWelcomeName(result.prefill.fullName)
       setAlreadySubmitted(result.alreadySubmitted)
-      setCertificateUrl(result.certificateUrl)
       setState('granted')
-
-      if (result.certificateUrl) {
-        triggerDownload(result.certificateUrl)
-      }
     } catch (error) {
       if (error instanceof EditalValidationError && error.reason === 'not_found') {
         setState('blocked')
@@ -118,22 +103,12 @@ export default function EditalCpfGate() {
           Bem-vindo(a) de volta, {welcomeName}!
         </h2>
         <p className="text-slate-300 mb-8">
-          Sua proposta ao Edital PPI já foi enviada. Você não precisa enviá-la novamente —
-          o download do seu certificado de inscrição na comunidade começou automaticamente.
+          Sua proposta ao Edital PPI já foi enviada. Você não precisa enviá-la novamente.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          {certificateUrl && (
-            <button
-              type="button"
-              onClick={() => triggerDownload(certificateUrl)}
-              className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all"
-            >
-              Baixar certificado novamente
-            </button>
-          )}
           <Link
             href="/edital/proposta"
-            className="px-6 py-4 border border-slate-700/50 text-slate-200 rounded-2xl font-bold hover:border-[#22AE84] transition-all text-center"
+            className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
           >
             Ver minha proposta
           </Link>
@@ -150,20 +125,10 @@ export default function EditalCpfGate() {
           Bem-vindo(a), {welcomeName}!
         </h2>
         <p className="text-slate-300 mb-8">
-          Seu cadastro na comunidade InnovaNation foi confirmado e o download do seu
-          certificado de inscrição começou automaticamente. Continue para preencher
+          Seu cadastro na comunidade InnovaNation foi confirmado. Continue para preencher
           o formulário de submissão da proposta ao Edital PPI.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          {certificateUrl && (
-            <button
-              type="button"
-              onClick={() => triggerDownload(certificateUrl)}
-              className="px-6 py-4 border border-slate-700/50 text-slate-200 rounded-2xl font-bold hover:border-[#22AE84] transition-all"
-            >
-              Baixar certificado novamente
-            </button>
-          )}
           <Link
             href="/edital/proposta"
             className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
