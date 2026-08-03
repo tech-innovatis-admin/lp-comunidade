@@ -19,6 +19,9 @@ type RequiredField =
   | 'institution_cnpj'
   | 'lab_name'
   | 'lab_area'
+  | 'lab_academic_unit'
+  | 'lab_structure_description'
+  | 'main_improvement_objective'
   | 'technical_justification'
   | 'expected_results';
 
@@ -27,6 +30,9 @@ const REQUIRED_FIELDS: RequiredField[] = [
   'institution_cnpj',
   'lab_name',
   'lab_area',
+  'lab_academic_unit',
+  'lab_structure_description',
+  'main_improvement_objective',
   'technical_justification',
   'expected_results',
 ];
@@ -45,12 +51,16 @@ type SubmissionRow = {
   institution_cnpj: string | null;
   lab_name: string | null;
   lab_area: string | null;
+  lab_academic_unit: string | null;
+  lab_structure_description: string | null;
+  main_improvement_objective: string | null;
   technical_justification: string | null;
   expected_results: string | null;
 };
 
 type RegistrationRow = {
   full_name: string;
+  email: string;
   cpf: string;
   created_at: Date;
 };
@@ -108,6 +118,9 @@ async function loadSubmission(registrationId: number): Promise<SubmissionRow | n
         institution_cnpj,
         lab_name,
         lab_area,
+        lab_academic_unit,
+        lab_structure_description,
+        main_improvement_objective,
         technical_justification,
         expected_results
       FROM edital_submissions
@@ -173,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     const registration = await queryOne<RegistrationRow>(
       `
-        SELECT full_name, cpf, created_at
+        SELECT full_name, email, cpf, created_at
         FROM registrations
         WHERE id = $1
         LIMIT 1
@@ -216,6 +229,9 @@ export async function POST(request: NextRequest) {
             institution_cnpj,
             lab_name,
             lab_area,
+            lab_academic_unit,
+            lab_structure_description,
+            main_improvement_objective,
             technical_justification,
             expected_results
           FROM edital_submissions
@@ -334,6 +350,9 @@ export async function POST(request: NextRequest) {
       institutionCnpj: result.submission.institution_cnpj,
       labName: result.submission.lab_name,
       labArea: result.submission.lab_area,
+      labAcademicUnit: result.submission.lab_academic_unit,
+      labStructureDescription: result.submission.lab_structure_description,
+      mainImprovementObjective: result.submission.main_improvement_objective,
       teamDescription: result.submission.team_description,
       technicalJustification: result.submission.technical_justification,
       expectedResults: result.submission.expected_results,
@@ -349,7 +368,7 @@ export async function POST(request: NextRequest) {
       console.error('Erro na exportação assíncrona para Sheets:', error);
     });
 
-    const webhookUrl = process.env.WEBHOOK_N8N_URL;
+    const webhookUrl = process.env.WEBHOOK_N8N_EDITAL_URL;
     if (webhookUrl) {
       (async () => {
         await fetch(webhookUrl, {
@@ -357,14 +376,15 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...sheetPayload,
+            email: registration.email,
             source: 'edital-proposta',
           }),
         });
       })().catch((error) => {
-        console.error('Erro no webhook N8N (não afeta a submissão):', error);
+        console.error('Erro no webhook N8N Edital (não afeta a submissão):', error);
       });
     } else {
-      console.warn('WEBHOOK_N8N_URL não configurada. Ignorando envio ao N8N.');
+      console.warn('WEBHOOK_N8N_EDITAL_URL não configurada. Ignorando envio ao N8N.');
     }
 
     return jsonResponse({ ok: true, submittedAt: submittedAtIso });
