@@ -2,11 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CreditCard, Loader2, CheckCircle2, AlertCircle, Download, FileText } from 'lucide-react'
 import { validateCpfForEdital, EditalValidationError } from '@/lib/edital-api'
 import { setEditalSession } from '@/lib/edital-session'
 
-type GateState = 'idle' | 'validating' | 'blocked' | 'granted'
+type GateState = 'idle' | 'validating' | 'blocked' | 'templates' | 'granted'
+
+const ANEXO_I_URL = '/edital/anexo-i-declaracao-responsabilidade.pdf'
+const ANEXO_II_URL = '/edital/anexo-ii-termo-contrapartida.pdf'
 
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')
@@ -15,6 +18,7 @@ export default function EditalCpfGate() {
   const [errorMessage, setErrorMessage] = useState('')
   const [welcomeName, setWelcomeName] = useState('')
   const [alreadySubmitted, setAlreadySubmitted] = useState(false)
+  const [templatesAcknowledged, setTemplatesAcknowledged] = useState(false)
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, '')
@@ -41,7 +45,8 @@ export default function EditalCpfGate() {
       setEditalSession({ token: result.token, prefill: result.prefill })
       setWelcomeName(result.prefill.fullName)
       setAlreadySubmitted(result.alreadySubmitted)
-      setState('granted')
+      setTemplatesAcknowledged(false)
+      setState(result.alreadySubmitted ? 'granted' : 'templates')
     } catch (error) {
       if (error instanceof EditalValidationError && error.reason === 'not_found') {
         setState('blocked')
@@ -117,25 +122,83 @@ export default function EditalCpfGate() {
     )
   }
 
-  if (state === 'granted') {
+  if (state === 'templates') {
     return (
-      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-slate-800 shadow-2xl text-center">
-        <CheckCircle2 className="w-12 h-12 text-[#22AE84] mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-white mb-3">
-          Bem-vindo(a), {welcomeName}!
-        </h2>
-        <p className="text-slate-300 mb-8">
-          Seu cadastro na comunidade InnovaNation foi confirmado. Continue para preencher
-          o formulário de submissão da proposta ao Edital PPI.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-12 border border-slate-800 shadow-2xl">
+        <div className="text-center mb-8">
+          <CheckCircle2 className="w-12 h-12 text-[#22AE84] mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-3">
+            Bem-vindo(a), {welcomeName}!
+          </h2>
+          <p className="text-slate-300">
+            Seu cadastro na comunidade InnovaNation foi confirmado. Antes de preencher a proposta,
+            baixe os dois modelos abaixo, preencha e assine. Você enviará os documentos assinados
+            na etapa <span className="text-slate-100 font-medium">Declarações</span> do formulário.
+          </p>
+        </div>
+
+        <div className="space-y-4 mb-8">
+          <a
+            href={ANEXO_I_URL}
+            download
+            className="flex items-start gap-4 p-5 bg-slate-900/60 border border-slate-700/50 rounded-2xl hover:border-[#22AE84]/50 transition-all group"
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#22AE84]/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-[#22AE84]" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-bold text-[#22AE84] mb-0.5">Anexo I</p>
+              <p className="text-white font-medium">Declaração de responsabilidade</p>
+              <p className="text-slate-400 text-sm mt-1">Modelo para assinatura do coordenador ou responsável técnico</p>
+            </div>
+            <Download className="w-5 h-5 text-slate-400 group-hover:text-[#22AE84] flex-shrink-0 mt-1 transition-colors" />
+          </a>
+
+          <a
+            href={ANEXO_II_URL}
+            download
+            className="flex items-start gap-4 p-5 bg-slate-900/60 border border-slate-700/50 rounded-2xl hover:border-[#22AE84]/50 transition-all group"
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#22AE84]/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-[#22AE84]" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-bold text-[#22AE84] mb-0.5">Anexo II</p>
+              <p className="text-white font-medium">Termo de compromisso de contrapartida</p>
+              <p className="text-slate-400 text-sm mt-1">Modelo para assinatura do laboratório ou instituição proponente</p>
+            </div>
+            <Download className="w-5 h-5 text-slate-400 group-hover:text-[#22AE84] flex-shrink-0 mt-1 transition-colors" />
+          </a>
+        </div>
+
+        <label className="flex items-start gap-3 mb-8 cursor-pointer text-left">
+          <input
+            type="checkbox"
+            checked={templatesAcknowledged}
+            onChange={(e) => setTemplatesAcknowledged(e.target.checked)}
+            className="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-900 text-[#22AE84] focus:ring-[#22AE84]/30 focus:ring-offset-0"
+          />
+          <span className="text-sm text-slate-300">
+            Baixei os dois modelos e entendi que preciso assiná-los e enviá-los na etapa Declarações.
+          </span>
+        </label>
+
+        {templatesAcknowledged ? (
           <Link
             href="/edital/proposta"
-            className="px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
+            className="block w-full px-6 py-4 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all text-center"
           >
             Continuar
           </Link>
-        </div>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="w-full px-6 py-4 bg-[#22AE84] text-white rounded-2xl font-bold opacity-50 cursor-not-allowed"
+          >
+            Continuar
+          </button>
+        )}
       </div>
     )
   }

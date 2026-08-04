@@ -30,7 +30,26 @@ export default function TelaDeclaracoes({
         <h2 className="text-xl font-bold text-white mb-2">Declarações</h2>
         <p className="text-slate-400">
           Envie a Declaração de Responsabilidade e o Termo de Compromisso de Contrapartida,
-          assinados conforme os modelos dos Anexos II e III do edital.
+          assinados conforme os modelos dos Anexos I e II do edital.{' '}
+          <span className="text-slate-500">
+            (
+            <a
+              href="/edital/anexo-i-declaracao-responsabilidade.pdf"
+              download
+              className="text-[#22AE84] hover:underline"
+            >
+              Anexo I
+            </a>
+            {' · '}
+            <a
+              href="/edital/anexo-ii-termo-contrapartida.pdf"
+              download
+              className="text-[#22AE84] hover:underline"
+            >
+              Anexo II
+            </a>
+            )
+          </span>
         </p>
       </div>
 
@@ -42,7 +61,7 @@ export default function TelaDeclaracoes({
         <DocumentUploadSlot
           token={token}
           requirementCode="8.1.15"
-          label="Declaração de Responsabilidade (Anexo II)"
+          label="Declaração de Responsabilidade (Anexo I)"
           helperText="Assinada pelo coordenador ou responsável técnico pela proposta"
           accept="application/pdf"
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
@@ -54,7 +73,7 @@ export default function TelaDeclaracoes({
         <DocumentUploadSlot
           token={token}
           requirementCode="8.1.16"
-          label="Termo de Compromisso de Contrapartida Institucional (Anexo III)"
+          label="Termo de Compromisso de Contrapartida Institucional (Anexo II)"
           helperText="Assinado pelo laboratório ou instituição proponente"
           accept="application/pdf"
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
