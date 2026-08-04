@@ -38,6 +38,7 @@ const { URL } = require('url');
       s.team_description,
       s.technical_justification,
       s.expected_results,
+      s.protocol_number,
       s.submitted_at,
       r.full_name,
       r.email,
@@ -78,6 +79,7 @@ const { URL } = require('url');
 
   const payload = {
     id: s.id,
+    protocolNumber: s.protocol_number ?? String(s.id),
     registrationId: s.registration_id,
     status: 'SUBMITTED',
     fullName: s.full_name,

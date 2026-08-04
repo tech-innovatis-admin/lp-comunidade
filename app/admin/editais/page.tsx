@@ -10,6 +10,7 @@ type Tab = 'pendentes' | 'ranking' | 'rejeitadas'
 
 interface PendingRow {
   id: number
+  protocol_number: string | null
   full_name: string
   institution_name: string | null
   submitted_at: string
@@ -17,6 +18,7 @@ interface PendingRow {
 
 interface RankingRow {
   id: number
+  protocol_number: string | null
   full_name: string
   institution_name: string | null
   evaluation_total_score: number
@@ -24,6 +26,7 @@ interface RankingRow {
 
 interface RejectedRow {
   id: number
+  protocol_number: string | null
   full_name: string
   institution_name: string | null
   disqualified_reason: string
@@ -32,7 +35,7 @@ interface RejectedRow {
 
 async function loadPending(): Promise<PendingRow[]> {
   return query<PendingRow>(
-    `SELECT s.id, r.full_name, s.institution_name, s.submitted_at
+    `SELECT s.id, s.protocol_number, r.full_name, s.institution_name, s.submitted_at
      FROM edital_submissions s
      INNER JOIN registrations r ON r.id = s.registration_id
      WHERE s.status = 'SUBMITTED' AND s.disqualified_at IS NULL AND s.evaluation_total_score IS NULL
@@ -42,7 +45,7 @@ async function loadPending(): Promise<PendingRow[]> {
 
 async function loadRanking(): Promise<RankingRow[]> {
   return query<RankingRow>(
-    `SELECT s.id, r.full_name, s.institution_name, s.evaluation_total_score
+    `SELECT s.id, s.protocol_number, r.full_name, s.institution_name, s.evaluation_total_score
      FROM edital_submissions s
      INNER JOIN registrations r ON r.id = s.registration_id
      WHERE s.status = 'SUBMITTED' AND s.disqualified_at IS NULL AND s.evaluation_total_score IS NOT NULL
@@ -52,7 +55,7 @@ async function loadRanking(): Promise<RankingRow[]> {
 
 async function loadRejected(): Promise<RejectedRow[]> {
   return query<RejectedRow>(
-    `SELECT s.id, r.full_name, s.institution_name, s.disqualified_reason, s.disqualified_at
+    `SELECT s.id, s.protocol_number, r.full_name, s.institution_name, s.disqualified_reason, s.disqualified_at
      FROM edital_submissions s
      INNER JOIN registrations r ON r.id = s.registration_id
      WHERE s.disqualified_at IS NOT NULL
@@ -103,6 +106,9 @@ async function PendingList() {
             <p className="text-sm text-slate-400 truncate">
               {submission.institution_name || 'Sem instituição informada'}
             </p>
+            {submission.protocol_number && (
+              <p className="text-xs text-slate-500 mt-1">Protocolo {submission.protocol_number}</p>
+            )}
           </div>
           <p className="text-xs text-slate-500 flex-shrink-0">
             {new Date(submission.submitted_at).toLocaleString('pt-BR')}
@@ -132,6 +138,9 @@ async function RankingList() {
             <p className="text-sm text-slate-400 truncate">
               {submission.institution_name || 'Sem instituição informada'}
             </p>
+            {submission.protocol_number && (
+              <p className="text-xs text-slate-500 mt-1">Protocolo {submission.protocol_number}</p>
+            )}
           </div>
           <span
             className={`px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 ${
@@ -163,6 +172,9 @@ async function RejectedList() {
           <div className="flex-1 min-w-0">
             <p className="text-white font-bold truncate">{submission.full_name}</p>
             <p className="text-sm text-red-300/80 truncate">{submission.disqualified_reason}</p>
+            {submission.protocol_number && (
+              <p className="text-xs text-slate-500 mt-1">Protocolo {submission.protocol_number}</p>
+            )}
           </div>
           <p className="text-xs text-slate-500 flex-shrink-0">
             {new Date(submission.disqualified_at).toLocaleString('pt-BR')}

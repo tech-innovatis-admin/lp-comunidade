@@ -16,6 +16,7 @@ import SubmissionActions from '@/app/components/admin/SubmissionActions'
 
 interface SubmissionDetailRow {
   id: number
+  protocol_number: string | null
   registration_id: number
   status: 'DRAFT' | 'SUBMITTED'
   full_name: string
@@ -50,7 +51,7 @@ interface DocumentRow {
 
 async function loadSubmission(id: number): Promise<SubmissionDetailRow | null> {
   return queryOne<SubmissionDetailRow>(
-    `SELECT s.id, s.registration_id, s.status, r.full_name, r.cpf,
+    `SELECT s.id, s.protocol_number, s.registration_id, s.status, r.full_name, r.cpf,
             s.team_description, s.institution_name, s.institution_cnpj,
             s.lab_name, s.lab_area, s.lab_academic_unit, s.lab_structure_description,
             s.lab_served_public, s.main_improvement_objective, s.budget_items,
@@ -219,6 +220,9 @@ export default async function AdminEditalDetailPage({
           </Link>
           <h1 className="text-2xl font-bold text-white mb-1">{submission.full_name}</h1>
           <p className="text-slate-400">
+            {submission.protocol_number && (
+              <span className="text-slate-300">Protocolo {submission.protocol_number} · </span>
+            )}
             CPF {submission.cpf} · Enviada em {new Date(submission.submitted_at).toLocaleString('pt-BR')}
           </p>
 
