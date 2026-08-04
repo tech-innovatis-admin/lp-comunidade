@@ -152,6 +152,7 @@ async function getSheetId(auth: any, sheetNameOrId?: string): Promise<string> {
 
 interface EditalSubmissionData {
   id: number;
+  protocolNumber: string;
   registrationId: number;
   status: 'DRAFT' | 'SUBMITTED';
   fullName: string;
@@ -215,7 +216,7 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
       submission.documentLinks[EDITAL_AUTO_GENERATED_DOCUMENT_CODE] || 'Não gerado';
     const communityCertificateCell = submission.communityCertificateUrl || 'Não gerado';
 
-    // Ordem das colunas: ID, Data de exportação, ID da Inscrição, Status, Nome, CPF,
+    // Ordem das colunas: ID, Protocolo, Data de exportação, ID da Inscrição, Status, Nome, CPF,
     // Instituição, CNPJ, Laboratório, Área do Laboratório, Unidade acadêmica,
     // Descrição da estrutura do laboratório, Objetivo principal da melhoria,
     // Descrição da Equipe, Justificativa Técnica, Resultados Esperados, Data de Envio,
@@ -224,6 +225,7 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
     const values = [
       [
         submission.id,
+        submission.protocolNumber,
         new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
         submission.registrationId,
         submission.status,
@@ -253,7 +255,7 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
     // dados de proposta do Edital com dados de inscrição.
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
-      range: 'PROPOSTAS!A:AC',
+      range: 'PROPOSTAS!A:AD',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values,
@@ -271,6 +273,7 @@ export async function appendEditalSubmissionToSheet(submission: EditalSubmission
 export function getEditalSheetHeaderRow(): string[] {
   return [
     'ID',
+    'Protocolo',
     'Data de exportação',
     'ID da Inscrição',
     'Status',

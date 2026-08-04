@@ -15,6 +15,7 @@ import {
   EDITAL_PHOTOS_PDF_DOCUMENT_CODE,
   getSubmissionRequiredDocumentCodes,
 } from '@/lib/edital-requirements';
+import { allocateEditalProtocolNumber } from '@/lib/edital-protocol';
 
 type RequiredField =
   | 'institution_name'
@@ -377,17 +378,20 @@ export async function POST(request: NextRequest) {
         ]
       )) as { rows: Array<{ id: number }> };
 
+      const protocolNumber = await allocateEditalProtocolNumber(client);
+
       const updateRows = (await client.query(
         `
           UPDATE edital_submissions
           SET status = 'SUBMITTED',
               submitted_at = NOW(),
-              updated_at = NOW()
+              updated_at = NOW(),
+              protocol_number = $2
           WHERE id = $1
-          RETURNING submitted_at
+          RETURNING submitted_at, protocol_number
         `,
-        [submission.id]
-      )) as { rows: Array<{ submitted_at: Date }> };
+        [submission.id, protocolNumber]
+      )) as { rows: Array<{ submitted_at: Date; protocol_number: string }> };
 
       const remainingDocs = documentRows.rows.filter(
         (row) => row.requirement_code !== EDITAL_PHOTO_DOCUMENT_CODE
@@ -397,6 +401,7 @@ export async function POST(request: NextRequest) {
         status: 'ok' as const,
         submission,
         submittedAt: updateRows.rows[0].submitted_at,
+        protocolNumber: updateRows.rows[0].protocol_number,
         documents: [
           ...remainingDocs,
           { id: photosPdfRows.rows[0].id, requirement_code: EDITAL_PHOTOS_PDF_DOCUMENT_CODE },
@@ -441,6 +446,7 @@ export async function POST(request: NextRequest) {
 
     const sheetPayload = {
       id: result.submission.id,
+      protocolNumber: result.protocolNumber,
       registrationId: result.submission.registration_id,
       status: 'SUBMITTED' as const,
       fullName: registration.full_name,
@@ -487,7 +493,11 @@ export async function POST(request: NextRequest) {
       console.warn('WEBHOOK_N8N_EDITAL_URL não configurada. Ignorando envio ao N8N.');
     }
 
-    return jsonResponse({ ok: true, submittedAt: submittedAtIso });
+    return jsonResponse({
+      ok: true,
+      submittedAt: submittedAtIso,
+      protocolNumber: result.protocolNumber,
+    });
   } catch (error) {
     console.error('[edital-proposta-enviar] Erro ao enviar proposta:', error);
     return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });
