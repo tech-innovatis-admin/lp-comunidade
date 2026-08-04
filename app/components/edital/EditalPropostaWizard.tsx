@@ -22,6 +22,7 @@ import {
   submitEditalProposal,
   submissionToWizardData,
 } from '@/lib/edital-proposta-api'
+import { isInstituicaoCnpjBlocking, onlyDigits } from '@/lib/br-documents'
 
 type WizardStep = 'equipe' | 'instituicao' | 'fotos' | 'proposta' | 'declaracoes' | 'revisao'
 
@@ -43,6 +44,24 @@ const DRAFT_STEP_BY_WIZARD_STEP: Partial<Record<WizardStep, EditalDraftStep>> = 
 
 const LAST_STEP_STORAGE_KEY = 'edital_proposta_last_step'
 
+function isEmptyDraft(data: EditalWizardData, documents: EditalSubmissionDocument[]): boolean {
+  if (documents.length > 0) {
+    return false
+  }
+
+  for (const key of Object.keys(EMPTY_WIZARD_DATA) as Array<keyof EditalWizardData>) {
+    if (key === 'budgetItems') {
+      if (data.budgetItems.length > 0) {
+        return false
+      }
+    } else if (data[key] !== '') {
+      return false
+    }
+  }
+
+  return true
+}
+
 function buildStepPayload(step: EditalDraftStep, data: EditalWizardData): Record<string, unknown> {
   if (step === 'equipe') {
     return { team_description: data.teamDescription }
@@ -50,7 +69,7 @@ function buildStepPayload(step: EditalDraftStep, data: EditalWizardData): Record
   if (step === 'instituicao') {
     return {
       institution_name: data.institutionName,
-      institution_cnpj: data.institutionCnpj,
+      institution_cnpj: onlyDigits(data.institutionCnpj),
       lab_name: data.labName,
       lab_area: data.labArea,
       lab_served_public: data.labServedPublic,
@@ -82,6 +101,7 @@ export default function EditalPropostaWizard() {
   const [showSavedConfirmation, setShowSavedConfirmation] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [instituicaoCnpjBlocked, setInstituicaoCnpjBlocked] = useState(false)
 
   const handleTokenExpired = useCallback(() => {
     clearEditalSession()
@@ -100,9 +120,12 @@ export default function EditalPropostaWizard() {
 
     fetchEditalDraft(session.token)
       .then((submission) => {
+        const wizardData = submission ? submissionToWizardData(submission) : EMPTY_WIZARD_DATA
+        const docs = submission?.documents ?? []
+
         if (submission) {
-          setData(submissionToWizardData(submission))
-          setDocuments(submission.documents)
+          setData(wizardData)
+          setDocuments(docs)
         }
 
         if (submission?.status === 'SUBMITTED') {
@@ -111,9 +134,16 @@ export default function EditalPropostaWizard() {
           return
         }
 
-        const lastStep = typeof window !== 'undefined' ? localStorage.getItem(LAST_STEP_STORAGE_KEY) : null
-        if (lastStep && STEPS.some((step) => step.key === lastStep)) {
-          setCurrentStep(lastStep as WizardStep)
+        if (isEmptyDraft(wizardData, docs)) {
+          setCurrentStep('equipe')
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(LAST_STEP_STORAGE_KEY)
+          }
+        } else {
+          const lastStep = typeof window !== 'undefined' ? localStorage.getItem(LAST_STEP_STORAGE_KEY) : null
+          if (lastStep && STEPS.some((step) => step.key === lastStep)) {
+            setCurrentStep(lastStep as WizardStep)
+          }
         }
 
         setStatus('ready')
@@ -140,6 +170,12 @@ export default function EditalPropostaWizard() {
       return Promise.resolve()
     }
 
+    if (currentStep === 'instituicao' && isInstituicaoCnpjBlocking(data.institutionCnpj)) {
+      setInstituicaoCnpjBlocked(true)
+      return Promise.resolve()
+    }
+
+    setInstituicaoCnpjBlocked(false)
     setSaveState('saving')
     return saveEditalDraftStep(token, draftStep, buildStepPayload(draftStep, data))
       .then(() => {
@@ -155,7 +191,23 @@ export default function EditalPropostaWizard() {
   }, [currentStep, token, data, handleTokenExpired])
 
   const goToStep = (step: string) => {
-    persistCurrentStep()
+    const targetIndex = STEPS.findIndex((item) => item.key === step)
+    const fromIndex = STEPS.findIndex((item) => item.key === currentStep)
+    const movingForward = targetIndex > fromIndex
+
+    if (
+      movingForward &&
+      currentStep === 'instituicao' &&
+      isInstituicaoCnpjBlocking(data.institutionCnpj)
+    ) {
+      setInstituicaoCnpjBlocked(true)
+      return
+    }
+
+    setInstituicaoCnpjBlocked(false)
+    if (movingForward || currentStep !== 'instituicao' || !isInstituicaoCnpjBlocking(data.institutionCnpj)) {
+      persistCurrentStep()
+    }
     setCurrentStep(step as WizardStep)
   }
 
@@ -255,9 +307,12 @@ export default function EditalPropostaWizard() {
           labAcademicUnit={data.labAcademicUnit}
           labArea={data.labArea}
           labServedPublic={data.labServedPublic}
-          onFieldChange={(field: TelaInstituicaoField, value: string) =>
+          onFieldChange={(field: TelaInstituicaoField, value: string) => {
+            if (field === 'institutionCnpj') {
+              setInstituicaoCnpjBlocked(false)
+            }
             setData((prev) => ({ ...prev, [field]: value }))
-          }
+          }}
           documents={documents}
           onDocumentUploaded={handleDocumentUploaded}
           onDocumentRemoved={handleDocumentRemoved}
@@ -353,6 +408,11 @@ export default function EditalPropostaWizard() {
       </div>
 
       <p className="mt-3 text-xs text-slate-500 text-right">
+        {instituicaoCnpjBlocked && (
+          <span className="block text-red-400 mb-1 text-sm">
+            Corrija o CNPJ antes de avançar ou salvar.
+          </span>
+        )}
         {saveState === 'saving' && 'Salvando...'}
         {saveState === 'saved' && 'Salvo'}
         {saveState === 'error' && 'Erro ao salvar automaticamente'}

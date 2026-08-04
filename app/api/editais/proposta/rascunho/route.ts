@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne, transaction } from '@/lib/db';
 import { applyNoStore, containsDangerousInput, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
+import { isValidCNPJ, onlyDigits } from '@/lib/br-documents';
+import { EDITAL_MAX_BUDGET_ITEM_VALUE } from '@/lib/edital-requirements';
 
 type DraftStep = 'equipe' | 'instituicao' | 'fotos' | 'proposta';
 
@@ -78,6 +80,24 @@ function normalizeTextInput(value: unknown, fieldName: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function normalizeCnpjInput(value: unknown, fieldName: string): string | null {
+  const text = normalizeTextInput(value, fieldName);
+  if (!text) {
+    return null;
+  }
+
+  const digits = onlyDigits(text);
+  if (digits.length === 0) {
+    return null;
+  }
+
+  if (digits.length === 14 && !isValidCNPJ(digits)) {
+    throw new Error('CNPJ inválido');
+  }
+
+  return digits;
+}
+
 function normalizeBudgetItems(value: unknown): Array<{
   descricao: string;
   valor_estimado: number;
@@ -115,6 +135,10 @@ function normalizeBudgetItems(value: unknown): Array<{
 
     if (typeof valorEstimado !== 'number' || !Number.isFinite(valorEstimado) || valorEstimado <= 0) {
       throw new Error(`budget_items[${index}].valor_estimado inválido`);
+    }
+
+    if (valorEstimado > EDITAL_MAX_BUDGET_ITEM_VALUE) {
+      throw new Error(`budget_items[${index}].valor_estimado excede o limite permitido`);
     }
 
     return {
@@ -322,7 +346,7 @@ export async function POST(request: NextRequest) {
         );
       } else if (step === 'instituicao') {
         const institutionName = normalizeTextInput(data.institution_name, 'institution_name');
-        const institutionCnpj = normalizeTextInput(data.institution_cnpj, 'institution_cnpj');
+        const institutionCnpj = normalizeCnpjInput(data.institution_cnpj, 'institution_cnpj');
         const labName = normalizeTextInput(data.lab_name, 'lab_name');
         const labArea = normalizeTextInput(data.lab_area, 'lab_area');
         const labServedPublic = normalizeTextInput(data.lab_served_public, 'lab_served_public');
@@ -412,7 +436,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message.startsWith('Campo ')) {
       return jsonResponse({ error: error.message }, { status: 400 });
     }
-    if (error instanceof Error && error.message.includes('budget_items')) {
+    if (error instanceof Error && (error.message.includes('budget_items') || error.message === 'CNPJ inválido')) {
       return jsonResponse({ error: error.message }, { status: 400 });
     }
     return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });

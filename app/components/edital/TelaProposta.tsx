@@ -6,6 +6,7 @@ import { EditalBudgetItem } from '@/lib/edital-proposta-api'
 import {
   EDITAL_MAX_BUDGET_ITEMS,
   EDITAL_MAX_BUDGET_DESCRIPTION_LENGTH,
+  EDITAL_MAX_BUDGET_ITEM_VALUE,
   EDITAL_MAX_BUDGET_JUSTIFICATION_LENGTH,
   EDITAL_MAX_TEXT_LENGTH,
 } from '@/lib/edital-requirements'
@@ -27,6 +28,27 @@ const inputClass =
 const textareaClass =
   'w-full px-6 py-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#22AE84]/30 focus:border-[#22AE84] transition-all font-medium resize-none'
 
+const brlFormatter = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+function formatBrlValue(value: number): string {
+  return brlFormatter.format(value)
+}
+
+function parseBrlInput(raw: string): number {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 0) {
+    return 0
+  }
+  const cents = Number.parseInt(digits, 10)
+  if (Number.isNaN(cents)) {
+    return 0
+  }
+  return Math.min(cents / 100, EDITAL_MAX_BUDGET_ITEM_VALUE)
+}
+
 export default function TelaProposta({
   mainImprovementObjective,
   onMainImprovementObjectiveChange,
@@ -40,19 +62,28 @@ export default function TelaProposta({
   const [valorDrafts, setValorDrafts] = useState<Record<number, string>>({})
 
   const handleValorChange = (index: number, raw: string) => {
-    if (!/^\d*\.?\d*$/.test(raw)) {
-      return
-    }
-    setValorDrafts((prev) => ({ ...prev, [index]: raw }))
-    const parsed = Number.parseFloat(raw)
-    updateItem(index, 'valor_estimado', Number.isNaN(parsed) ? 0 : parsed)
+    const parsed = parseBrlInput(raw)
+    const display = parsed === 0 ? '' : formatBrlValue(parsed)
+    setValorDrafts((prev) => ({ ...prev, [index]: display }))
+    updateItem(index, 'valor_estimado', parsed)
+  }
+
+  const clearValorDraft = (index: number) => {
+    setValorDrafts((prev) => {
+      if (prev[index] === undefined) {
+        return prev
+      }
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
   }
 
   const getValorDisplay = (index: number, item: EditalBudgetItem): string => {
     if (valorDrafts[index] !== undefined) {
       return valorDrafts[index]
     }
-    return item.valor_estimado === 0 ? '' : String(item.valor_estimado)
+    return item.valor_estimado === 0 ? '' : formatBrlValue(item.valor_estimado)
   }
 
   const updateItem = (index: number, field: keyof EditalBudgetItem, value: string | number) => {
@@ -142,9 +173,10 @@ export default function TelaProposta({
             />
             <input
               type="text"
-              inputMode="decimal"
+              inputMode="numeric"
               value={getValorDisplay(index, item)}
               onChange={(e) => handleValorChange(index, e.target.value)}
+              onBlur={() => clearValorDraft(index)}
               placeholder="Valor estimado (R$)"
               className={inputClass}
             />
