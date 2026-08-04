@@ -1,3 +1,5 @@
+import { onlyDigits } from '@/lib/br-documents';
+
 export interface EditalSubmissionDocument {
   id: number;
   requirementCode: string;
@@ -69,7 +71,7 @@ export function submissionToWizardData(submission: EditalSubmission): EditalWiza
   return {
     teamDescription: submission.teamDescription ?? '',
     institutionName: submission.institutionName ?? '',
-    institutionCnpj: submission.institutionCnpj ?? '',
+    institutionCnpj: onlyDigits(submission.institutionCnpj ?? ''),
     labName: submission.labName ?? '',
     labArea: submission.labArea ?? '',
     labAcademicUnit: submission.labAcademicUnit ?? '',

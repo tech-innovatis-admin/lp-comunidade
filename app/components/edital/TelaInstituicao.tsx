@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react'
 import DocumentUploadSlot from './DocumentUploadSlot'
 import { EditalSubmissionDocument } from '@/lib/edital-proposta-api'
 import { EDITAL_MAX_DOCUMENT_BYTES, EDITAL_MAX_TEXT_LENGTH } from '@/lib/edital-requirements'
+import { formatCNPJ, isValidCNPJ, onlyDigits } from '@/lib/br-documents'
 
 export type TelaInstituicaoField =
   | 'institutionName'
@@ -49,6 +50,14 @@ export default function TelaInstituicao({
   onDocumentRemoved,
   onTokenExpired,
 }: TelaInstituicaoProps) {
+  const cnpjDigits = onlyDigits(institutionCnpj)
+  const cnpjDisplay = formatCNPJ(cnpjDigits)
+  const cnpjInvalid = cnpjDigits.length === 14 && !isValidCNPJ(cnpjDigits)
+
+  const handleCnpjChange = (raw: string) => {
+    onFieldChange('institutionCnpj', onlyDigits(raw).slice(0, 14))
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -81,11 +90,16 @@ export default function TelaInstituicao({
             <input
               id="institution_cnpj"
               type="text"
-              value={institutionCnpj}
-              onChange={(e) => onFieldChange('institutionCnpj', e.target.value)}
+              inputMode="numeric"
+              value={cnpjDisplay}
+              onChange={(e) => handleCnpjChange(e.target.value)}
               placeholder="00.000.000/0000-00"
-              className={inputClass}
+              aria-invalid={cnpjInvalid}
+              className={`${inputClass}${cnpjInvalid ? ' border-red-500/70 focus:border-red-500 focus:ring-red-500/30' : ''}`}
             />
+            {cnpjInvalid && (
+              <p className="mt-2 text-sm text-red-400 ml-1">CNPJ inválido. Confira os números e tente novamente.</p>
+            )}
           </div>
         </div>
       </section>
