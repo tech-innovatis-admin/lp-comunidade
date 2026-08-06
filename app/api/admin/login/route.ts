@@ -9,9 +9,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { createAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
-import { findPlatformUserByUsername } from '@/lib/platforms-db';
-
-const REQUIRED_PLATFORM_TAG = 'edital-admin';
+import { credentialsEnabled } from '@/lib/authMode';
+import {
+  findPlatformUserByUsername,
+  hasEditalAdminAccess,
+} from '@/lib/platforms-db';
 
 // Hash "morto" usado quando o usuário não existe ou não tem a tag exigida, para que
 // bcrypt.compare sempre rode e o tempo de resposta não vaze quem tem conta válida
@@ -24,6 +26,10 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!credentialsEnabled()) {
+      return jsonResponse({ error: 'Login por senha desabilitado. Use SSO.' }, { status: 403 });
+    }
+
     if (!isTrustedOrigin(request)) {
       return jsonResponse({ error: 'Origem não autorizada' }, { status: 403 });
     }
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
       jsonResponse({ error: 'Credenciais inválidas ou sem acesso a este painel' }, { status: 401 });
 
     const user = await findPlatformUserByUsername(username);
-    const hasAccess = !!user && (user.platforms || []).includes(REQUIRED_PLATFORM_TAG);
+    const hasAccess = hasEditalAdminAccess(user);
     const hashToCompare = hasAccess ? user!.hash : DUMMY_HASH_FOR_TIMING_SAFETY;
 
     const passwordMatches = await bcrypt.compare(password, hashToCompare);

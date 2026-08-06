@@ -58,6 +58,8 @@ function getAllowedOrigins(request: NextRequest): Set<string> {
     origins.add('http://127.0.0.1:3000');
     origins.add('http://localhost:3001');
     origins.add('http://127.0.0.1:3001');
+    origins.add('http://localhost:3003');
+    origins.add('http://127.0.0.1:3003');
   }
 
   return origins;
