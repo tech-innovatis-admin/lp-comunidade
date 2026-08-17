@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { query } from '@/lib/db'
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
+import { unauthenticatedAdminPath } from '@/lib/authMode'
 import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
 
 type Tab = 'pendentes' | 'ranking' | 'rejeitadas'
@@ -200,7 +201,7 @@ export default async function AdminEditaisPage({
   const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
 
   if (!verifyAdminSessionToken(token)) {
-    redirect('/admin/login?next=' + encodeURIComponent(nextPath))
+    redirect(unauthenticatedAdminPath())
   }
 
   return (

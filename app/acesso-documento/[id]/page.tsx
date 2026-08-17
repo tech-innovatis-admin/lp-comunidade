@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { ADMIN_SESSION_COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-auth'
+import { unauthenticatedAdminPath } from '@/lib/authMode'
 
 const ADMIN_PENDENTES_PATH = '/admin/editais?tab=pendentes'
 
@@ -12,5 +13,5 @@ export default async function AcessoDocumentoPage() {
     redirect(ADMIN_PENDENTES_PATH)
   }
 
-  redirect(`/admin/login?next=${encodeURIComponent(ADMIN_PENDENTES_PATH)}`)
+  redirect(unauthenticatedAdminPath())
 }

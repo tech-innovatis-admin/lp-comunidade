@@ -7,8 +7,15 @@ import {
 import { cognitoEnabled } from '@/lib/authMode';
 import {
   CognitoConfigError,
+  cookieSecure,
+  decodeOAuthCookie,
   exchangeCode,
+  publicAppOrigin,
   verifyIdToken,
+  buildLogoutUrl,
+  isSilentAuthError,
+  REAUTH_COOKIE,
+  reauthCookieOptions,
 } from '@/lib/cognitoOidc';
 import {
   findPlatformUserByCognitoSub,
@@ -20,16 +27,8 @@ import {
 const OAUTH_COOKIE = 'comunidade_oauth';
 const DEFAULT_NEXT = '/admin/editais?tab=pendentes';
 
-function appOrigin(request: NextRequest) {
-  return (
-    process.env.APP_URL?.replace(/\/$/, '') ||
-    process.env.PUBLIC_BASE_URL?.replace(/\/$/, '') ||
-    `${request.nextUrl.protocol}//${request.nextUrl.host}`
-  );
-}
-
 function errorRedirect(request: NextRequest, code: string) {
-  const url = new URL('/admin/login', appOrigin(request));
+  const url = new URL('/admin/login', publicAppOrigin(request));
   url.searchParams.set('sso_error', code);
   return NextResponse.redirect(url);
 }
@@ -39,7 +38,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'SSO Cognito desabilitado.' }, { status: 404 });
   }
 
-  if (request.nextUrl.searchParams.get('error')) {
+  const oauthError = request.nextUrl.searchParams.get('error');
+  if (oauthError) {
+    if (isSilentAuthError(oauthError)) {
+      const response = NextResponse.redirect(buildLogoutUrl());
+      response.cookies.set(REAUTH_COOKIE, '1', reauthCookieOptions(120));
+      response.cookies.set(OAUTH_COOKIE, '', reauthCookieOptions(0));
+      return response;
+    }
     return errorRedirect(request, 'cognito_denied');
   }
 
@@ -56,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   let oauth: { state?: string; nonce?: string; code_verifier?: string };
   try {
-    oauth = JSON.parse(rawCookie) as typeof oauth;
+    oauth = decodeOAuthCookie(rawCookie);
   } catch {
     return errorRedirect(request, 'invalid_oauth_cookie');
   }
@@ -96,10 +102,10 @@ export async function GET(request: NextRequest) {
       name: user!.name,
     });
 
-    const response = NextResponse.redirect(new URL(DEFAULT_NEXT, appOrigin(request)));
+    const response = NextResponse.redirect(new URL(DEFAULT_NEXT, publicAppOrigin(request)));
     response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: cookieSecure(),
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
@@ -107,7 +113,7 @@ export async function GET(request: NextRequest) {
     response.cookies.set(OAUTH_COOKIE, '', {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: cookieSecure(),
       path: '/',
       maxAge: 0,
     });

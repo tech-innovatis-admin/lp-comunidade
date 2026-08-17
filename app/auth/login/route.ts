@@ -1,22 +1,32 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { cognitoEnabled } from '@/lib/authMode';
 import {
   buildAuthorizeUrl,
   CognitoConfigError,
+  cookieSecure,
   createNonce,
   createOAuthState,
   createPkcePair,
+  encodeOAuthCookie,
+  publicAppOrigin,
+  REAUTH_COOKIE,
+  reauthCookieOptions,
+  type AuthorizePrompt,
 } from '@/lib/cognitoOidc';
 
 const OAUTH_COOKIE = 'comunidade_oauth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!cognitoEnabled()) {
-    return NextResponse.json({ error: 'SSO Cognito desabilitado.' }, { status: 404 });
+    return NextResponse.redirect(new URL('/admin/login', publicAppOrigin(request)));
   }
 
   try {
+    const resume =
+      request.nextUrl.searchParams.get('resume') === '1' ||
+      request.cookies.get(REAUTH_COOKIE)?.value === '1';
+    const prompt: AuthorizePrompt = resume ? 'login' : 'none';
     const { verifier, challenge } = createPkcePair();
     const state = createOAuthState();
     const nonce = createNonce();
@@ -24,12 +34,14 @@ export async function GET() {
       state,
       nonce,
       codeChallenge: challenge,
+      prompt,
     });
 
     const response = NextResponse.redirect(authorizeUrl);
+    response.cookies.set(REAUTH_COOKIE, '', reauthCookieOptions(0));
     response.cookies.set(
       OAUTH_COOKIE,
-      JSON.stringify({
+      encodeOAuthCookie({
         state,
         nonce,
         code_verifier: verifier,
@@ -37,7 +49,7 @@ export async function GET() {
       {
         httpOnly: true,
         sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        secure: cookieSecure(),
         path: '/',
         maxAge: 600,
       }
