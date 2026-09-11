@@ -9,8 +9,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { getFileBytes, uploadFileToKey } from '@/lib/s3';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 import { generateThumbnailFromPdf, generateThumbnailFromImage } from '@/lib/thumbnail';
+import { toStableErrorDto } from '@/lib/edital-dto-validation';
+
+const THUMBNAILABLE_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
 
 interface DocumentRow {
   id: number;
@@ -25,8 +33,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    if (!verifyAdminSessionToken(token)) {
+    const session = await verifyAdminSession();
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -47,6 +55,13 @@ export async function GET(
 
     if (!document) {
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 });
+    }
+
+    if (!THUMBNAILABLE_MIME_TYPES.has(document.mime_type)) {
+      return NextResponse.json(
+        toStableErrorDto(null, { error: 'unsupported_mime', fallbackMessage: 'Tipo de arquivo sem suporte para miniatura' }),
+        { status: 415 }
+      );
     }
 
     let thumbnailKey = document.thumbnail_s3_key;

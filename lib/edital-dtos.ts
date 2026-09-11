@@ -1,5 +1,7 @@
 import type {
   EditalBudgetItem,
+  EditalDocumentUploadResponseDto,
+  EditalGateResponseDto,
   EditalSubmissionDocumentDto,
   EditalSubmissionDto,
   EditalSubmissionStatus,
@@ -95,5 +97,62 @@ export function toSubmissionDto(row: EditalSubmissionRow): EditalSubmissionDto {
     updatedAt: toIsoDate(row.updated_at),
     submittedAt: toIsoDate(row.submitted_at),
     documents: (row.documents ?? []).map(toDocumentDto),
+  };
+}
+
+type GatePrefillInput = {
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  profession: string | null;
+  organization: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+};
+
+export function toGateResponseDto(params: {
+  token: string;
+  alreadySubmitted: boolean;
+  submittedAt: InternalDate;
+  prefill: GatePrefillInput;
+}): EditalGateResponseDto {
+  return {
+    ok: true,
+    token: params.token,
+    alreadySubmitted: params.alreadySubmitted,
+    submittedAt: toIsoDate(params.submittedAt),
+    prefill: {
+      fullName: params.prefill.fullName,
+      email: params.prefill.email,
+      phone: params.prefill.phone,
+      profession: params.prefill.profession,
+      organization: params.prefill.organization,
+      cep: params.prefill.cep,
+      logradouro: params.prefill.logradouro,
+      numero: params.prefill.numero,
+      bairro: params.prefill.bairro,
+      cidade: params.prefill.cidade,
+      estado: params.prefill.estado,
+    },
+  };
+}
+
+export function toDocumentUploadResponseDto(params: {
+  documentId: number | string;
+  requirementCode: string;
+  filename: string;
+  mimeType: string;
+  uploadedAt: InternalDate;
+}): EditalDocumentUploadResponseDto {
+  return {
+    documentId: toNumber(params.documentId),
+    requirementCode: params.requirementCode,
+    filename: params.filename,
+    mimeType: params.mimeType,
+    uploadedAt: toIsoDate(params.uploadedAt) ?? new Date().toISOString(),
   };
 }

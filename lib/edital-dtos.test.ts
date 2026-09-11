@@ -236,3 +236,121 @@ test('tipos client-safe não importam dependências de servidor', () => {
   assert.doesNotMatch(source, /next\/server/);
   assert.doesNotMatch(source, /s3/i);
 });
+
+// ─── Task 9: novos testes de contrato ────────────────────────────────────────
+
+import {
+  parseGateCpfBody,
+  parseAdminEvaluationBody,
+  parseAdminDesqualificarBody,
+} from './edital-dto-validation';
+import { toGateResponseDto, toDocumentUploadResponseDto } from './edital-dtos';
+
+test('parseGateCpfBody: rejeita propriedades desconhecidas', () => {
+  const r1 = parseGateCpfBody({ cpf: '123', website: '', registrationId: 5 });
+  assert.equal(r1.ok, false);
+  assert.doesNotMatch(JSON.stringify(r1.error), /registrationId|5/);
+});
+
+test('parseGateCpfBody: rejeita CPF ausente', () => {
+  const r = parseGateCpfBody({ website: '' });
+  assert.equal(r.ok, false);
+  assert.equal(r.error.error, 'validation_error');
+});
+
+test('parseGateCpfBody: aceita cpf e website', () => {
+  const r = parseGateCpfBody({ cpf: '12345678901', website: '' });
+  assert.equal(r.ok, true);
+  if (r.ok) {
+    assert.equal(r.value.cpf, '12345678901');
+    assert.equal(r.value.website, '');
+  }
+});
+
+test('parseGateCpfBody: aceita cpf sem website (campo opcional-omitido ainda falha pois não está no allowlist sem website)', () => {
+  // website é opcional em termos de semântica mas obrigatório na allowlist para anti-honeypot
+  // enviar sem website -> falta um campo mas não excede: parseGateCpfBody só exige que
+  // chaves presentes sejam do allowlist; campo ausente é permitido.
+  const r = parseGateCpfBody({ cpf: '12345678901' });
+  assert.equal(r.ok, true);
+});
+
+test('toGateResponseDto: não inclui registrationId nem CPF no payload', () => {
+  const dto = toGateResponseDto({
+    token: 'tok',
+    alreadySubmitted: false,
+    submittedAt: null,
+    prefill: {
+      fullName: 'Fulano',
+      email: 'a@b.com',
+      phone: null,
+      profession: null,
+      organization: null,
+      cep: null,
+      logradouro: null,
+      numero: null,
+      bairro: null,
+      cidade: null,
+      estado: null,
+    },
+  });
+  const serialized = JSON.stringify(dto);
+  assert.equal(dto.ok, true);
+  assert.equal(dto.token, 'tok');
+  assert.doesNotMatch(serialized, /registrationId|registration_id|cpf/i);
+  assert.doesNotMatch(serialized, /s3_key|file_hash|request_ip/);
+  assert.equal('registrationId' in dto, false);
+});
+
+test('parseAdminEvaluationBody: rejeita propriedades extras', () => {
+  const r = parseAdminEvaluationBody({ scores: { c1: 10 }, extra: 'valor' });
+  assert.equal(r.ok, false);
+  assert.doesNotMatch(JSON.stringify(r.error), /extra|valor/);
+});
+
+test('parseAdminEvaluationBody: rejeita scores ausentes ou não-objeto', () => {
+  const r1 = parseAdminEvaluationBody({});
+  const r2 = parseAdminEvaluationBody({ scores: 'texto' });
+  assert.equal(r1.ok, false);
+  assert.equal(r2.ok, false);
+});
+
+test('parseAdminEvaluationBody: aceita scores como objeto', () => {
+  const r = parseAdminEvaluationBody({ scores: { criterio1: 8 } });
+  assert.equal(r.ok, true);
+  if (r.ok) assert.deepEqual(r.value.scores, { criterio1: 8 });
+});
+
+test('parseAdminDesqualificarBody: rejeita propriedades extras', () => {
+  const r = parseAdminDesqualificarBody({ reason: 'Motivo', userId: 99 });
+  assert.equal(r.ok, false);
+  assert.doesNotMatch(JSON.stringify(r.error), /userId|99/);
+});
+
+test('parseAdminDesqualificarBody: rejeita motivo vazio', () => {
+  const r = parseAdminDesqualificarBody({ reason: '   ' });
+  assert.equal(r.ok, false);
+  assert.equal(r.error.error, 'validation_error');
+});
+
+test('parseAdminDesqualificarBody: aceita motivo não vazio', () => {
+  const r = parseAdminDesqualificarBody({ reason: 'Fora do prazo' });
+  assert.equal(r.ok, true);
+  if (r.ok) assert.equal(r.value.reason, 'Fora do prazo');
+});
+
+test('toDocumentUploadResponseDto: inclui mimeType e uploadedAt, não expõe s3_key nem hash', () => {
+  const uploadedAt = new Date('2026-09-11T15:00:00.000Z');
+  const dto = toDocumentUploadResponseDto({
+    documentId: '42',
+    requirementCode: '8.1.1',
+    filename: 'doc.pdf',
+    mimeType: 'application/pdf',
+    uploadedAt,
+  });
+  const serialized = JSON.stringify(dto);
+  assert.equal(dto.documentId, 42);
+  assert.equal(dto.mimeType, 'application/pdf');
+  assert.equal(dto.uploadedAt, '2026-09-11T15:00:00.000Z');
+  assert.doesNotMatch(serialized, /s3_key|file_hash|registrationId|s3/i);
+});

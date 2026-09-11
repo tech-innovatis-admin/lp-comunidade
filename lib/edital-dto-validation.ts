@@ -239,6 +239,42 @@ export function parseDocumentUploadFields(input: unknown): ParseResult<{ require
   };
 }
 
+const GATE_CPF_FIELDS = new Set(['cpf', 'website']);
+const ADMIN_EVALUATION_FIELDS = new Set(['scores']);
+const ADMIN_DESQUALIFICAR_FIELDS = new Set(['reason']);
+
+export function parseGateCpfBody(input: unknown): ParseResult<{ cpf: string; website: string }> {
+  if (!isRecord(input) || !hasOnlyKeys(input, GATE_CPF_FIELDS)) {
+    return validationError('Payload inválido');
+  }
+  if (typeof input.cpf !== 'string') {
+    return validationError('CPF inválido');
+  }
+  const website = typeof input.website === 'string' ? input.website : '';
+  return { ok: true, value: { cpf: input.cpf, website } };
+}
+
+export function parseAdminEvaluationBody(input: unknown): ParseResult<{ scores: Record<string, unknown> }> {
+  if (!isRecord(input) || !hasOnlyKeys(input, ADMIN_EVALUATION_FIELDS)) {
+    return validationError('Payload inválido');
+  }
+  if (!isRecord(input.scores)) {
+    return validationError('Notas ausentes');
+  }
+  return { ok: true, value: { scores: input.scores } };
+}
+
+export function parseAdminDesqualificarBody(input: unknown): ParseResult<{ reason: string }> {
+  if (!isRecord(input) || !hasOnlyKeys(input, ADMIN_DESQUALIFICAR_FIELDS)) {
+    return validationError('Payload inválido');
+  }
+  const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+  if (!reason) {
+    return validationError('Informe o motivo da desqualificação');
+  }
+  return { ok: true, value: { reason } };
+}
+
 export function toStableErrorDto(
   error: unknown,
   options: { error?: string; fallbackMessage?: string; missing?: EditalValidationDto['missing'] } = {}

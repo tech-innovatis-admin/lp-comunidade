@@ -8,7 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { query, queryOne } from '@/lib/db';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
+import { parseAdminDesqualificarBody } from '@/lib/edital-dto-validation';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return applyNoStore(NextResponse.json(body, init));
@@ -23,8 +24,7 @@ export async function POST(
       return jsonResponse({ error: 'Origem não autorizada' }, { status: 403 });
     }
 
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    const session = verifyAdminSessionToken(token);
+    const session = await verifyAdminSession();
     if (!session) {
       return jsonResponse({ error: 'Não autorizado' }, { status: 401 });
     }
@@ -51,17 +51,19 @@ export async function POST(
       return jsonResponse({ error: 'Proposta não encontrada' }, { status: 404 });
     }
 
-    let body: { reason?: unknown };
+    let bodyRaw: unknown;
     try {
-      body = await request.json();
+      bodyRaw = await request.json();
     } catch {
       return jsonResponse({ error: 'Requisição inválida' }, { status: 400 });
     }
 
-    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
-    if (!reason) {
-      return jsonResponse({ error: 'Informe o motivo da desqualificação' }, { status: 400 });
+    const parsedBody = parseAdminDesqualificarBody(bodyRaw);
+    if (!parsedBody.ok) {
+      return jsonResponse({ error: parsedBody.error.message ?? 'Payload inválido' }, { status: 400 });
     }
+
+    const { reason } = parsedBody.value;
 
     await query(
       `UPDATE edital_submissions

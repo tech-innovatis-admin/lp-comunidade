@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { query, queryOne } from '@/lib/db';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return applyNoStore(NextResponse.json(body, init));
@@ -22,8 +22,7 @@ export async function POST(
       return jsonResponse({ error: 'Origem não autorizada' }, { status: 403 });
     }
 
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    const session = verifyAdminSessionToken(token);
+    const session = await verifyAdminSession();
     if (!session) {
       return jsonResponse({ error: 'Não autorizado' }, { status: 401 });
     }

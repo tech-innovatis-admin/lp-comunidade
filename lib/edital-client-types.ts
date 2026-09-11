@@ -88,6 +88,37 @@ export interface EditalDocumentUploadResponseDto {
   uploadedAt: string;
 }
 
+export interface EditalGatePrefillDto {
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  profession: string | null;
+  organization: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+}
+
+export interface EditalGateResponseDto {
+  ok: true;
+  token: string;
+  alreadySubmitted: boolean;
+  submittedAt: string | null;
+  prefill: EditalGatePrefillDto;
+}
+
+export interface EditalAdminActionResponseDto {
+  ok: true;
+}
+
+export interface EditalAdminEvaluationResponseDto {
+  ok: true;
+  total: number;
+}
+
 export interface EditalWizardData {
   teamDescription: string;
   institutionName: string;

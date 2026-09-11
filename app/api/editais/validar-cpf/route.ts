@@ -13,6 +13,8 @@ import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security'
 import { createEditalToken } from '@/lib/edital-auth';
 import { uploadFileToKey } from '@/lib/s3';
 import { generateCommunityCertificatePdf } from '@/lib/community-certificate-pdf';
+import { parseGateCpfBody } from '@/lib/edital-dto-validation';
+import { toGateResponseDto } from '@/lib/edital-dtos';
 
 interface RegistrationRow {
   id: number;
@@ -58,20 +60,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let body: { cpf?: unknown; website?: unknown };
+    let bodyRaw: unknown;
     try {
-      body = await request.json();
+      bodyRaw = await request.json();
     } catch {
       return jsonResponse({ error: 'CPF inválido' }, { status: 400 });
     }
 
-    const website = typeof body.website === 'string' ? body.website : '';
+    const parsedBody = parseGateCpfBody(bodyRaw);
+    if (!parsedBody.ok) {
+      return jsonResponse({ error: parsedBody.error.message ?? 'Payload inválido' }, { status: 400 });
+    }
+
+    const { cpf, website } = parsedBody.value;
+
     if (website.trim().length > 0) {
       console.warn('[edital-validar-cpf] honeypot acionado');
       return jsonResponse({ error: 'not_found' }, { status: 404 });
     }
 
-    const cpf = typeof body.cpf === 'string' ? body.cpf : '';
     if (!isValidCPF(cpf)) {
       return jsonResponse({ error: 'CPF inválido' }, { status: 400 });
     }
@@ -133,8 +140,7 @@ export async function POST(request: NextRequest) {
       [registrationId]
     );
 
-    return jsonResponse({
-      ok: true,
+    return jsonResponse(toGateResponseDto({
       token,
       alreadySubmitted: Boolean(submittedSubmission),
       submittedAt: submittedSubmission?.submitted_at ?? null,
@@ -151,7 +157,7 @@ export async function POST(request: NextRequest) {
         cidade: registration.address_city,
         estado: registration.address_state,
       },
-    });
+    }));
   } catch (error) {
     console.error('[edital-validar-cpf] Erro ao validar CPF:', error);
     return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });
