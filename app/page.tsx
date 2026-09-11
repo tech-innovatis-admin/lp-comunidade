@@ -1,5 +1,6 @@
 import Navbar from "./components/Navbar"
 import HeroSection from "./components/HeroSection"
+import EditalAnnouncementSection from "./components/EditalAnnouncementSection"
 import InnovaNationSection from "./components/InnovaNationSection"
 import TestimonialsSection from "./components/TestimonialsSection"
 import RegistrationFormSection from "./components/RegistrationFormSection"
@@ -13,6 +14,8 @@ export default function Home() {
       <Navbar />
       <main className="flex-1 relative z-10">
         <HeroSection />
+
+        <EditalAnnouncementSection />
 
         <InnovaNationSection />
 
