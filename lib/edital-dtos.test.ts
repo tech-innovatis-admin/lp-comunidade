@@ -183,6 +183,32 @@ test('rejeita upload com propriedades desconhecidas ou file ausente', () => {
   assert.doesNotMatch(JSON.stringify(unknown.error), /registrationId|123/);
 });
 
+test('aceita FormData real de upload com requirementCode e file', () => {
+  const formData = new FormData();
+  const file = new Blob(['%PDF-'], { type: 'application/pdf' });
+  formData.append('requirementCode', '8.1.1');
+  formData.append('file', file, 'documento.pdf');
+
+  const result = parseDocumentUploadFields(formData);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value.requirementCode, '8.1.1');
+  assert.ok(result.value.file instanceof Blob);
+});
+
+test('rejeita FormData de upload com chaves extras', () => {
+  const formData = new FormData();
+  formData.append('requirementCode', '8.1.1');
+  formData.append('file', new Blob(['%PDF-'], { type: 'application/pdf' }), 'documento.pdf');
+  formData.append('registrationId', '123');
+
+  const result = parseDocumentUploadFields(formData);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.error, 'validation_error');
+  assert.doesNotMatch(JSON.stringify(result.error), /registrationId|123/);
+});
+
 test('rejeita upload de códigos gerados automaticamente', () => {
   const result = parseDocumentUploadFields({
     requirementCode: '8.1.10',

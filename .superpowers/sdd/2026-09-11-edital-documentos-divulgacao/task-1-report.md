@@ -89,3 +89,55 @@ ReadLints: sem erros nos arquivos da tarefa.
   de editar todos os componentes.
 - `npm` emite aviso local `Unknown env config "devdir"`; nao bloqueia testes nem
   typecheck e nao parece introduzido por esta tarefa.
+
+## Fix round 1/5: FormData em parseDocumentUploadFields
+
+Status: DONE em execucao local.
+
+Mudanca:
+
+- `parseDocumentUploadFields` agora aceita `FormData` real vindo de
+  `request.formData()` quando contem exatamente `requirementCode` e `file`.
+- Chaves extras em `FormData` sao rejeitadas antes de validar codigo ou arquivo.
+- O caminho de objeto simples foi preservado para testes/uso futuro.
+
+TDD evidence:
+
+```text
+Command: npm test
+Exit code: 1
+Expected failure: aceita FormData real de upload com requirementCode e file
+Reason: o parser tratava FormData como objeto comum e retornava validation_error.
+```
+
+Covering tests:
+
+- `aceita FormData real de upload com requirementCode e file`
+- `rejeita FormData de upload com chaves extras`
+
+GREEN:
+
+```text
+Command: npm test
+Exit code: 0
+Result: 15 tests, 15 pass, 0 fail.
+```
+
+Typecheck:
+
+```text
+Command: npx tsc --noEmit
+Exit code: 0
+Result: sem erros TypeScript.
+```
+
+Lint IDE:
+
+```text
+ReadLints: sem erros nos arquivos alterados neste round.
+```
+
+Concerns:
+
+- O aviso local do npm `Unknown env config "devdir"` continua aparecendo e segue
+  nao bloqueante.
