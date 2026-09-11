@@ -1,73 +1,25 @@
 import { onlyDigits } from '@/lib/br-documents';
+import {
+  EMPTY_WIZARD_DATA,
+  type EditalBudgetItem,
+  type EditalDraftStep,
+  type EditalMissingItem,
+  type EditalSubmissionDocumentDto,
+  type EditalSubmissionDto,
+  type EditalWizardData,
+} from '@/lib/edital-client-types';
 
-export interface EditalSubmissionDocument {
-  id: number;
-  requirementCode: string;
-  originalFilename: string | null;
-  mimeType: string;
-  sizeBytes: number;
-  uploadedAt: string;
-}
+export { EMPTY_WIZARD_DATA } from '@/lib/edital-client-types';
+export type {
+  EditalBudgetItem,
+  EditalDraftStep,
+  EditalMissingItem,
+  EditalSubmissionDocumentDto as EditalSubmissionDocument,
+  EditalSubmissionDto as EditalSubmission,
+  EditalWizardData,
+} from '@/lib/edital-client-types';
 
-export interface EditalBudgetItem {
-  descricao: string;
-  valor_estimado: number;
-  justificativa: string;
-}
-
-export interface EditalSubmission {
-  id: number;
-  registrationId: number;
-  status: 'DRAFT' | 'SUBMITTED';
-  teamDescription: string | null;
-  institutionName: string | null;
-  institutionCnpj: string | null;
-  labName: string | null;
-  labArea: string | null;
-  labAcademicUnit: string | null;
-  labStructureDescription: string | null;
-  mainImprovementObjective: string | null;
-  labServedPublic: string | null;
-  budgetItems: EditalBudgetItem[] | null;
-  technicalJustification: string | null;
-  expectedResults: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  submittedAt: string | null;
-  documents: EditalSubmissionDocument[];
-}
-
-export interface EditalWizardData {
-  teamDescription: string;
-  institutionName: string;
-  institutionCnpj: string;
-  labName: string;
-  labArea: string;
-  labAcademicUnit: string;
-  labStructureDescription: string;
-  mainImprovementObjective: string;
-  labServedPublic: string;
-  budgetItems: EditalBudgetItem[];
-  technicalJustification: string;
-  expectedResults: string;
-}
-
-export const EMPTY_WIZARD_DATA: EditalWizardData = {
-  teamDescription: '',
-  institutionName: '',
-  institutionCnpj: '',
-  labName: '',
-  labArea: '',
-  labAcademicUnit: '',
-  labStructureDescription: '',
-  mainImprovementObjective: '',
-  labServedPublic: '',
-  budgetItems: [],
-  technicalJustification: '',
-  expectedResults: '',
-};
-
-export function submissionToWizardData(submission: EditalSubmission): EditalWizardData {
+export function submissionToWizardData(submission: EditalSubmissionDto): EditalWizardData {
   return {
     teamDescription: submission.teamDescription ?? '',
     institutionName: submission.institutionName ?? '',
@@ -83,13 +35,6 @@ export function submissionToWizardData(submission: EditalSubmission): EditalWiza
     expectedResults: submission.expectedResults ?? '',
   };
 }
-
-export type EditalDraftStep = 'equipe' | 'instituicao' | 'fotos' | 'proposta';
-
-export type EditalMissingItem =
-  | { type: 'document'; requirementCode: string }
-  | { type: 'photo'; required: number; found: number }
-  | { type: 'field'; field: string };
 
 export type EditalApiErrorReason =
   | 'token_expired'
@@ -156,7 +101,7 @@ async function throwEditalApiError(response: Response): Promise<never> {
   throw new EditalApiError(response.status, 'server_error', 'Erro interno do servidor');
 }
 
-export async function fetchEditalDraft(token: string): Promise<EditalSubmission | null> {
+export async function fetchEditalDraft(token: string): Promise<EditalSubmissionDto | null> {
   const response = await fetch('/api/editais/proposta/rascunho', {
     method: 'GET',
     headers: { 'X-Edital-Token': token },
@@ -193,7 +138,7 @@ export async function uploadEditalDocument(
   token: string,
   requirementCode: string,
   file: File
-): Promise<{ documentId: number; requirementCode: string; filename: string }> {
+): Promise<{ documentId: number; requirementCode: string; filename: string; mimeType?: string; uploadedAt?: string }> {
   const formData = new FormData();
   formData.append('requirementCode', requirementCode);
   formData.append('file', file);
