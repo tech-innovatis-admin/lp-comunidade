@@ -5,6 +5,7 @@ import { verifyEditalToken } from '@/lib/edital-auth';
 import { parseDraftRequest, toStableErrorDto } from '@/lib/edital-dto-validation';
 import { toSubmissionDto } from '@/lib/edital-dtos';
 import { query } from '@/lib/db';
+import { parseDatabaseId } from '@/lib/database-id';
 
 type SubmissionDocumentRow = {
   id: number | string;
@@ -88,6 +89,12 @@ async function loadSubmission(registrationId: number) {
     return null;
   }
 
+  const submissionId = parseDatabaseId(submission.id);
+  const submissionRegistrationId = parseDatabaseId(submission.registration_id);
+  if (submissionId === null || submissionRegistrationId === null) {
+    throw new Error('invalid_database_id');
+  }
+
   const documents = await query<SubmissionDocumentRow>(
     `
       SELECT
@@ -101,12 +108,24 @@ async function loadSubmission(registrationId: number) {
       WHERE submission_id = $1
       ORDER BY uploaded_at ASC, id ASC
     `,
-    [submission.id]
+    [submissionId]
   );
 
   return {
     ...submission,
-    documents,
+    id: submissionId,
+    registration_id: submissionRegistrationId,
+    documents: documents.map((document) => {
+      const documentId = parseDatabaseId(document.id);
+      if (documentId === null) {
+        throw new Error('invalid_database_id');
+      }
+
+      return {
+        ...document,
+        id: documentId,
+      };
+    }),
   };
 }
 
@@ -268,10 +287,16 @@ export async function POST(request: NextRequest) {
         [registrationId]
       ) as { rows: Array<{ id: number | string; updated_at: Date }> };
 
+      const row = submission.rows[0];
+      const submissionId = row ? parseDatabaseId(row.id) : null;
+      if (submissionId === null) {
+        throw new Error('invalid_database_id');
+      }
+
       return {
         conflict: false as const,
-        submissionId: submission.rows[0]?.id ? Number(submission.rows[0].id) : null,
-        updatedAt: submission.rows[0]?.updated_at ?? null,
+        submissionId,
+        updatedAt: row.updated_at,
       };
     });
 

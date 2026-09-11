@@ -16,10 +16,11 @@ import {
 import { uploadFileToKey } from '@/lib/s3';
 import { parseDocumentUploadFields } from '@/lib/edital-dto-validation';
 import { toDocumentUploadResponseDto } from '@/lib/edital-dtos';
+import { parseDatabaseId } from '@/lib/database-id';
 
 type SubmissionRow = {
-  id: number;
-  registration_id: number;
+  id: number | string;
+  registration_id: number | string;
   status: 'DRAFT' | 'SUBMITTED';
 };
 
@@ -56,7 +57,13 @@ async function getOrCreateSubmissionId(registrationId: number): Promise<number> 
       throw new Error('already_submitted');
     }
 
-    return existing.id;
+    const submissionId = parseDatabaseId(existing.id);
+    const submissionRegistrationId = parseDatabaseId(existing.registration_id);
+    if (submissionId === null || submissionRegistrationId === null) {
+      throw new Error('invalid_database_id');
+    }
+
+    return submissionId;
   }
 
   await query(
@@ -82,7 +89,13 @@ async function getOrCreateSubmissionId(registrationId: number): Promise<number> 
     throw new Error('Não foi possível localizar ou criar a submissão');
   }
 
-  return created.id;
+  const submissionId = parseDatabaseId(created.id);
+  const submissionRegistrationId = parseDatabaseId(created.registration_id);
+  if (submissionId === null || submissionRegistrationId === null) {
+    throw new Error('invalid_database_id');
+  }
+
+  return submissionId;
 }
 
 async function getSubmissionPhotoCount(submissionId: number): Promise<number> {
@@ -191,7 +204,7 @@ export async function POST(request: NextRequest) {
     const upload = await uploadFileToKey(buffer, s3Key, mimeType);
 
     const documentRow = isPhotoDocumentCode(requirementCode)
-      ? await queryOne<{ id: number; uploaded_at: Date }>(
+      ? await queryOne<{ id: number | string; uploaded_at: Date }>(
           `
             INSERT INTO edital_submission_documents (
               submission_id,
@@ -215,7 +228,7 @@ export async function POST(request: NextRequest) {
             sanitizedFilename,
           ]
         )
-      : await queryOne<{ id: number; uploaded_at: Date }>(
+      : await queryOne<{ id: number | string; uploaded_at: Date }>(
           `
             WITH deleted AS (
               DELETE FROM edital_submission_documents
@@ -249,10 +262,15 @@ export async function POST(request: NextRequest) {
       return jsonResponse({ error: 'Não foi possível registrar o documento' }, { status: 500 });
     }
 
+    const documentId = parseDatabaseId(documentRow.id);
+    if (documentId === null) {
+      return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });
+    }
+
     return jsonResponse({
       ok: true,
       ...toDocumentUploadResponseDto({
-        documentId: documentRow.id,
+        documentId,
         requirementCode,
         filename: sanitizedFilename,
         mimeType,
@@ -263,6 +281,9 @@ export async function POST(request: NextRequest) {
     console.error('[edital-proposta-documento] Erro ao enviar documento:', error);
     if (error instanceof Error && error.message === 'already_submitted') {
       return jsonResponse({ error: 'already_submitted' }, { status: 409 });
+    }
+    if (error instanceof Error && error.message === 'invalid_database_id') {
+      return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });
     }
     if (error instanceof Error) {
       return jsonResponse({ error: error.message }, { status: 400 });

@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryOne, transaction } from '@/lib/db';
 import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
-import { getSignedFileUrl } from '@/lib/s3';
+import { deleteFile, getSignedFileUrl } from '@/lib/s3';
+import { parseDatabaseId } from '@/lib/database-id';
 
 type DocumentOwnerRow = {
-  id: number;
-  submission_id: number;
+  id: number | string;
+  submission_id: number | string;
   s3_key: string;
+  thumbnail_s3_key?: string | null;
   requirement_code: string;
-  registration_id: number;
+  registration_id: number | string;
   status: 'DRAFT' | 'SUBMITTED';
 };
 
@@ -73,13 +75,22 @@ export async function GET(
     }
 
     const { id } = await params;
-    const documentId = Number.parseInt(id, 10);
-    if (!Number.isFinite(documentId)) {
+    const documentId = parseDatabaseId(id);
+    if (documentId === null) {
       return jsonResponse({ error: 'Documento inválido' }, { status: 400 });
     }
 
     const document = await loadDocument(documentId);
-    if (!document || document.registration_id !== registrationId) {
+    if (!document) {
+      return jsonResponse({ error: 'Documento não encontrado' }, { status: 404 });
+    }
+
+    const ownerRegistrationId = parseDatabaseId(document.registration_id);
+    if (ownerRegistrationId === null) {
+      return jsonResponse({ error: 'Erro interno do servidor' }, { status: 500 });
+    }
+
+    if (ownerRegistrationId !== registrationId) {
       return jsonResponse({ error: 'Documento não encontrado' }, { status: 404 });
     }
 
@@ -123,8 +134,8 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const documentId = Number.parseInt(id, 10);
-    if (!Number.isFinite(documentId)) {
+    const documentId = parseDatabaseId(id);
+    if (documentId === null) {
       return jsonResponse({ error: 'Documento inválido' }, { status: 400 });
     }
 
@@ -134,6 +145,8 @@ export async function DELETE(
           SELECT
             d.id,
             d.submission_id,
+            d.s3_key,
+            d.thumbnail_s3_key,
             s.registration_id,
             s.status
           FROM edital_submission_documents d
@@ -142,10 +155,20 @@ export async function DELETE(
           FOR UPDATE
         `,
         [documentId]
-      ) as { rows: Array<{ id: number; submission_id: number; registration_id: number; status: 'DRAFT' | 'SUBMITTED' }> };
+      ) as { rows: Array<DocumentOwnerRow> };
 
       const row = document.rows[0];
-      if (!row || row.registration_id !== registrationId || row.status === 'SUBMITTED') {
+      if (!row) {
+        return { found: false as const };
+      }
+
+      const ownerRegistrationId = parseDatabaseId(row.registration_id);
+      const submissionId = parseDatabaseId(row.submission_id);
+      if (ownerRegistrationId === null || submissionId === null) {
+        throw new Error('invalid_database_id');
+      }
+
+      if (ownerRegistrationId !== registrationId || row.status === 'SUBMITTED') {
         return { found: false as const };
       }
 
@@ -155,15 +178,29 @@ export async function DELETE(
           WHERE id = $1
           AND submission_id = $2
         `,
-        [documentId, row.submission_id]
+        [documentId, submissionId]
       );
 
-      return { found: true as const };
+      return {
+        found: true as const,
+        s3Keys: [row.s3_key, row.thumbnail_s3_key].filter((key): key is string => Boolean(key)),
+      };
     });
 
     if (!result.found) {
       return jsonResponse({ error: 'Documento não encontrado' }, { status: 404 });
     }
+
+    const cleanupResults = await Promise.allSettled(result.s3Keys.map((key) => deleteFile(key)));
+    cleanupResults.forEach((cleanupResult, index) => {
+      if (cleanupResult.status === 'rejected') {
+        console.error('[edital-proposta-documento] Falha ao limpar S3 após exclusão:', {
+          documentId,
+          s3Key: result.s3Keys[index],
+          error: cleanupResult.reason instanceof Error ? cleanupResult.reason.message : cleanupResult.reason,
+        });
+      }
+    });
 
     return jsonResponse({ ok: true });
   } catch (error) {

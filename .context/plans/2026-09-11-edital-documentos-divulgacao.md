@@ -286,7 +286,7 @@ sao rejeitados; fotos validas continuam aceitas.
 - Produces: `parseDatabaseId(value: unknown): number | null`.
 - Consumed by: mappings/responses de rascunho/upload e autorizacao GET/DELETE.
 
-- [ ] **Step 1: Write failing database-ID tests**
+- [x] **Step 1: Write failing database-ID tests**
 
 ```ts
 test('normaliza BIGINT string positivo para number')
@@ -295,26 +295,42 @@ test('rejeita zero, negativo, decimal, texto e valor acima de MAX_SAFE_INTEGER')
 test('IDs normalizados comparam propriedade sem coerção frouxa')
 ```
 
-- [ ] **Step 2: Run tests and confirm RED**
+Evidencia 2026-09-11: criado `lib/database-id.test.ts` com os quatro casos
+previstos, cobrindo string BIGINT, number seguro, rejeicoes e comparacao de
+propriedade sem coerção frouxa.
+
+- [x] **Step 2: Run tests and confirm RED**
 
 Run: `npm test`
 Expected: FAIL por `parseDatabaseId` inexistente.
 
-- [ ] **Step 3: Implement and apply the boundary normalization**
+Evidencia 2026-09-11: `npm test` falhou com
+`Cannot find module './database-id'`; os demais 33 testes passaram.
+
+- [x] **Step 3: Implement and apply the boundary normalization**
 
 Implementar conversao explicita com `Number`, `Number.isSafeInteger` e valor > 0.
 Aplicar a IDs retornados por `pg` antes de montar respostas do rascunho/upload e
 antes de comparar `registration_id` ao token em GET/DELETE. Se uma ID de banco
 for invalida, retornar erro interno controlado; nao autorizar por coerção.
 
-- [ ] **Step 4: Include S3 keys in the delete transaction**
+Evidencia 2026-09-11: criado `lib/database-id.ts`; rascunho normaliza `id` e
+`registration_id` da submissao e IDs dos documentos antes do DTO; upload normaliza
+IDs de submissao/documento antes de usar em respostas; GET/DELETE normalizam
+parametro e `registration_id` antes da comparacao de propriedade.
+
+- [x] **Step 4: Include S3 keys in the delete transaction**
 
 Selecionar `s3_key` e `thumbnail_s3_key` com `FOR UPDATE`. Depois do commit e de
 uma exclusao autorizada, chamar `deleteFile` para cada chave existente via
 `Promise.allSettled`. Logar apenas ID/chave tecnica em falha. Manter 404 para
 outro usuario ou `SUBMITTED` e 401 para token expirado.
 
-- [ ] **Step 5: Verify the original regression**
+Evidencia 2026-09-11: DELETE seleciona `s3_key` e `thumbnail_s3_key` na transacao
+com `FOR UPDATE`, remove a linha antes do commit e limpa os objetos S3 depois do
+commit com `Promise.allSettled`, mantendo falha de S3 como best-effort.
+
+- [x] **Step 5: Verify the original regression**
 
 Run: `npm test`
 Expected: PASS nos testes de ID, arquivos e auth.
@@ -323,6 +339,11 @@ Teste manual: enviar e excluir um documento e uma foto; o X exibe loader, o item
 some, outro arquivo pode ser enviado e, apos reload, o excluido nao retorna.
 Confirmar no ambiente descartavel que a linha foi removida e os objetos foram
 apagados; testar 401, propriedade alheia e proposta `SUBMITTED`.
+
+Evidencia 2026-09-11: `npm test` passou com 37 testes; `npx tsc --noEmit`
+terminou com exit 0. Ambos emitiram apenas o aviso local de npm sobre `devdir`.
+Matriz manual de exclusao adiada por nao haver ambiente descartavel autorizado
+nesta execucao.
 
 ---
 
