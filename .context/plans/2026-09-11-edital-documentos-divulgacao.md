@@ -10,6 +10,11 @@
 
 **Spec:** [.context/specs/2026-09-11-edital-documentos-divulgacao.md](../specs/2026-09-11-edital-documentos-divulgacao.md)
 
+**Status 2026-09-11:** concluido para implementacao de codigo e documentacao
+local. Aceite final permanece aberto ate o PDF oficial existir em
+`public/edital/edital-ppi-2026.pdf` e a matriz manual ser executada em ambiente
+descartavel autorizado.
+
 ## Global Constraints
 
 - Documentos do usuario: somente PDF, DOC e DOCX, maximo de 10 MiB.
@@ -561,7 +566,7 @@ cada JSON público com `rg` para nomes proibidos; não usar dados reais.
 **Interfaces:**
 - Produces: evidence-backed completion and a precise resumption point.
 
-- [ ] **Step 1: Run automated verification**
+- [x] **Step 1: Run automated verification**
 
 Run: `npm test`
 Expected: exit 0, including auth, file policy and database-ID tests.
@@ -572,7 +577,17 @@ Expected: exit 0.
 Run: `npm run build`
 Expected: exit 0 including standalone postbuild.
 
-- [ ] **Step 2: Run repository checks**
+Evidencia 2026-09-11:
+
+- `npm test`: exit 0; 41 testes passaram, incluindo auth, DTOs, politica de
+  arquivos, IDs de banco e acesso a documentos. Aviso local de npm:
+  `Unknown env config "devdir"`.
+- `npx tsc --noEmit`: exit 0. Mesmo aviso local de npm sobre `devdir`.
+- `npm run build`: exit 0; Next compilou, gerou 24 paginas e executou
+  `postbuild`. O postbuild informou
+  `[fix-standalone-runtime] Runtime SSR não encontrado; nada a copiar.`
+
+- [x] **Step 2: Run repository checks**
 
 Run: `git diff --check`
 Expected: exit 0.
@@ -584,18 +599,53 @@ Run: `rg -n "application/pdf" app/components/edital`
 Expected: nenhuma restricao de input que exclua DOC/DOCX; ocorrencias restantes
 devem ser justificadas como deteccao/preview de PDF.
 
-- [ ] **Step 3: Complete the manual acceptance matrix**
+Evidencia 2026-09-11:
+
+- `git diff --check`: exit 0, sem saida.
+- `rg -n 'anexo-(i-declaracao-responsabilidade|ii-termo-contrapartida)\.pdf' app public`:
+  exit 1, sem ocorrencias.
+- `rg -n "application/pdf" app/components/edital`: uma ocorrencia em
+  `app/components/edital/DocumentUploadSlot.tsx`, usada para detectar preview
+  de PDF e alternar a acao entre ver/baixar; nao e restricao de `accept`.
+- Evidencia estatica adicional: `public/edital/` contem os dois DOCX oficiais;
+  links executaveis dos anexos em `app` apontam para `.docx`; a frase do item
+  7.3 aparece uma vez em `TelaProposta.tsx`; `app/page.tsx` posiciona
+  `EditalAnnouncementSection` entre `HeroSection` e `InnovaNationSection`.
+
+- [x] **Step 3: Complete the manual acceptance matrix**
 
 Registrar resultado para: downloads DOCX, PDF/DOC/DOCX validos, arquivos adulterados,
 limites de tamanho, fotos, exclusao e reload, sessao/propriedade/status, admin
 PDF/Word, texto 7.3, modal por mouse/teclado, PDF oficial e CTA `/edital`.
 Nao usar dados pessoais nem disparar envio final/webhooks.
 
-- [ ] **Step 4: Review final diff and update context**
+Matriz registrada em 2026-09-11:
+
+| Item | Resultado |
+| --- | --- |
+| Downloads DOCX | Verificacao estatica: links do gate e Declaracoes apontam para `.docx`; arquivos presentes em `public/edital/`. Manual em navegador diferido. |
+| PDF/DOC/DOCX validos | Coberto por testes unitarios de assinatura/MIME e typecheck; upload real diferido por falta de ambiente descartavel. |
+| Arquivos adulterados | Coberto por testes unitarios para ZIP comum, extensao/MIME/assinatura incoerentes e imagem em campo documental; teste manual diferido. |
+| Limites de tamanho | Regras preservadas por codigo/typecheck; validacao manual de arquivo >10 MiB diferida. |
+| Fotos | Regras de imagem permanecem separadas da politica documental; upload/exclusao manual diferidos. |
+| Exclusao e reload | Coberto por testes de ID e revisao de transacao/limpeza best-effort; validacao manual em banco/S3 descartavel diferida. |
+| Sessao, propriedade e status | Typecheck/testes de parsers e normalizacao cobrem contratos locais; cenario 401/404/`SUBMITTED` diferido. |
+| Admin PDF/Word | Testes unitarios cobrem attachment Word, inline PDF/imagem e bloqueio de thumbnail Word; sessao admin real diferida. |
+| Texto 7.3 | Verificado por `rg -n -F`; uma ocorrencia em `TelaProposta.tsx`. |
+| Modal mouse/teclado | Build/typecheck e inspeção estatica do componente; teste visual e interativo diferido. |
+| PDF oficial | Bloqueado: `public/edital/edital-ppi-2026.pdf` ausente. |
+| CTA `/edital` | Build/typecheck e inspeção estatica do componente; teste em navegador diferido. |
+
+- [x] **Step 4: Review final diff and update context**
 
 Confirmar que alteracoes de auth preexistentes continuam preservadas. Marcar spec
 `implementada` e plano `concluido` somente com evidencias. Atualizar estado com
 commit/deploy reais, pendencias e proximo passo; nao equiparar build local a deploy.
+
+Evidencia 2026-09-11: `git status --short` confirmou trabalho local de auth e
+manifests ainda nao commitado. Esta Task 10 atualiza apenas `.context/` e o
+relatorio local em `.superpowers/`; o commit deve incluir somente `.context/`.
+Nenhum deploy, migration, webhook, S3 ou banco real foi executado.
 
 ## Planned execution order
 
@@ -604,6 +654,8 @@ para seu aceite, mas Tasks 1 a 7 podem ser implementadas antes que ele chegue.
 
 ## Resumption point
 
-Plano criado em 2026-09-11; nenhuma implementacao desta spec foi iniciada.
-Antes de executar, confira `git status --short`, preserve o trabalho local de auth
-e confirme a disponibilidade de `public/edital/edital-ppi-2026.pdf`.
+Implementacao local de codigo concluida e verificacoes automatizadas executadas
+em 2026-09-11. Para liberar o aceite final, copiar o PDF oficial para
+`public/edital/edital-ppi-2026.pdf`, validar o arquivo e executar a matriz manual
+em ambiente descartavel autorizado. Preserve o trabalho local de auth e nao
+trate build local como deploy.
