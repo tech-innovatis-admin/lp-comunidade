@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Info, Plus, Trash2 } from 'lucide-react'
 import { EditalBudgetItem } from '@/lib/edital-proposta-api'
 import {
   EDITAL_MAX_BUDGET_ITEMS,
@@ -108,6 +108,12 @@ export default function TelaProposta({
         <p className="text-slate-400">
           Plano de aplicação dos recursos, justificativa técnica e resultados esperados.
         </p>
+        <div className="mt-4 flex items-start gap-3 p-4 bg-slate-900/60 border border-slate-700/50 rounded-xl">
+          <Info className="w-5 h-5 text-[#22AE84] flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-sm text-slate-200 leading-relaxed">
+            As instruções para submissão da proposta estão descritas no item 7.3 do edital.
+          </p>
+        </div>
       </div>
 
       <div>
