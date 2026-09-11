@@ -28,7 +28,12 @@ Esta entrega deve:
 - separar o contrato HTTP do Edital dos tipos e linhas internas do banco por meio
   de DTOs com allowlist explícita, reduzindo exposição acidental de dados sensíveis.
 
-## Evidencias do estado atual
+## Baseline historico pre-implementacao
+
+Esta secao preserva o diagnostico que originou a entrega. Ela descreve o estado
+observado antes da implementacao local registrada em 2026-09-11; o estado atual
+do checkout esta resumido em [project-state.md](../project-state.md). O PDF
+oficial do edital segue ausente e permanece bloqueio de aceite final.
 
 - `public/edital/` contem apenas os dois anexos em PDF.
 - `EditalCpfGate.tsx` e `TelaDeclaracoes.tsx` apontam para esses PDFs.

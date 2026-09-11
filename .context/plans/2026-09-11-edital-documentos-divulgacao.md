@@ -1,6 +1,6 @@
 # Plano de implementacao: documentos e divulgacao do Edital PPI
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use Markdown checkbox syntax for tracking.
 
 **Goal:** Publicar anexos Word, aceitar documentos PDF/DOC/DOCX com validacao segura, proteger o fluxo do Edital com DTOs allowlisted, corrigir a exclusao do rascunho e divulgar o Edital PPI 2026 na home.
 
@@ -49,7 +49,7 @@ descartavel autorizado.
   explicitamente allowlisted; não retorna `registrationId`, CPF, S3 ou hashes.
 - `lib/edital-client-types.ts` não pode importar `pg`, `Buffer`, `next/server` ou S3.
 
-- [ ] **Step 1: Write failing DTO allowlist tests**
+- [x] **Step 1: Write failing DTO allowlist tests**
 
 Cobrir mapeamento de submissão/documento, ausência de campos sensíveis,
 rejeição de propriedade desconhecida em cada step, tipos inválidos, limites,
@@ -57,23 +57,23 @@ erro estável e separação dos imports client/server. Incluir uma fixture inter
 com `registration_id`, `s3_key`, `file_hash`, IP e user-agent e afirmar que nenhum
 deles aparece no DTO serializado.
 
-- [ ] **Step 2: Run tests and confirm RED**
+- [x] **Step 2: Run tests and confirm RED**
 
 Run: `npm test`
 Expected: FAIL por módulos e mapeadores ainda inexistentes.
 
-- [ ] **Step 3: Implement DTOs and allowlist parsers**
+- [x] **Step 3: Implement DTOs and allowlist parsers**
 
 Definir schemas/parsers sem aceitar spread de objetos. Cada parser deve retornar
 DTO validado ou erro de validação; campos desconhecidos são rejeitados antes da
 regra de negócio. Datas devem sair em ISO e mensagens sem valores sensíveis.
 
-- [ ] **Step 4: Make client API consume only DTOs**
+- [x] **Step 4: Make client API consume only DTOs**
 
 Atualizar `lib/edital-proposta-api.ts` e componentes para importar somente
 `edital-client-types.ts`; manter tipos de banco e mapeadores no servidor.
 
-- [ ] **Step 5: Run tests and typecheck**
+- [x] **Step 5: Run tests and typecheck**
 
 Run: `npm test` (Expected: PASS) e `npx tsc --noEmit` (Expected: exit 0).
 
@@ -194,12 +194,12 @@ terminou com exit 0. Ambos emitiram apenas o aviso local de npm sobre
 - Produces: URLs publicas estaveis dos dois DOCX.
 - Consumed by: gate de CPF e etapa Declaracoes.
 
-- [ ] **Step 1: Copy the verified official assets**
+- [x] **Step 1: Copy the verified official assets**
 
 Copiar, preservando bytes, dos caminhos fornecidos para os nomes ASCII definidos
 na spec. Este passo e uma copia binaria autorizada para dentro do repositorio.
 
-- [ ] **Step 2: Verify the copied DOCX archives**
+- [x] **Step 2: Verify the copied DOCX archives**
 
 Run: `unzip -t public/edital/anexo-i-declaracao-responsabilidade.docx`
 Expected: `No errors detected`.
@@ -209,19 +209,19 @@ Expected: `No errors detected`.
 
 Comparar SHA-256 entre origem e destino com `shasum -a 256`; cada par deve ser igual.
 
-- [ ] **Step 3: Update every model URL**
+- [x] **Step 3: Update every model URL**
 
 Trocar constantes/links para `.docx` em `EditalCpfGate.tsx` e
 `TelaDeclaracoes.tsx`. Manter rotulos, checkbox e comportamento de download.
 
-- [ ] **Step 4: Remove obsolete PDFs only after proving no reference remains**
+- [x] **Step 4: Remove obsolete PDFs only after proving no reference remains**
 
 Run: `rg -n 'anexo-(i-declaracao-responsabilidade|ii-termo-contrapartida)\.pdf' . -g '!node_modules' -g '!.git'`
 Expected: somente historico em `docs/`/`.context/`, sem referencia executavel.
 
 Remover os dois PDFs de `public/edital/`; nao alterar documentos historicos.
 
-- [ ] **Step 5: Verify public asset references**
+- [x] **Step 5: Verify public asset references**
 
 Run: `rg -n 'anexo-(i-declaracao-responsabilidade|ii-termo-contrapartida)\.(pdf|docx)' app public`
 Expected: codigo executavel aponta somente para `.docx`, ambos presentes.
@@ -241,7 +241,7 @@ Expected: codigo executavel aponta somente para `.docx`, ambos presentes.
 - Consumes: politica/validador da Task 1.
 - Produces: upload que persiste MIME canonico e UI que seleciona os tres formatos.
 
-- [ ] **Step 1: Replace PDF-only validation in the API**
+- [x] **Step 1: Replace PDF-only validation in the API**
 
 Em `validateDocumentFile`, manter o ramo de foto. No ramo documental, chamar:
 
@@ -254,19 +254,19 @@ return validation.mimeType
 Usar o retorno canonico no `uploadFileToKey` e na coluna `mime_type`. Preservar
 limite, hash, nome sanitizado, codigos automaticos e regra de foto.
 
-- [ ] **Step 2: Centralize the input accept value**
+- [x] **Step 2: Centralize the input accept value**
 
 Importar `EDITAL_DOCUMENT_ACCEPT` nas telas e passa-lo aos nove slots documentais,
 removendo `application/pdf` duplicado. Ajustar helper text comum para
 `Formatos aceitos: PDF, DOC e DOCX (até 10 MB)` sem retirar orientacoes especificas.
 
-- [ ] **Step 3: Make the uploaded-file action format-aware**
+- [x] **Step 3: Make the uploaded-file action format-aware**
 
 Em `DocumentUploadSlot`, usar `document.mimeType` para mostrar `Eye`/`Ver arquivo`
 em PDF e `Download`/`Baixar arquivo` em DOC/DOCX. A chamada continua usando
 `getEditalDocumentUrl`; o disposition sera tratado pela Task 6.
 
-- [ ] **Step 4: Verify format behavior**
+- [x] **Step 4: Verify format behavior**
 
 Run: `npm test`
 Expected: todos os casos de assinatura passam.
@@ -423,13 +423,13 @@ descartavel com sessao/admin e arquivos S3 autorizados nesta execucao.
 **Interfaces:**
 - No data contract changes; produces static informational copy.
 
-- [ ] **Step 1: Add the exact guidance copy**
+- [x] **Step 1: Add the exact guidance copy**
 
 Logo abaixo do paragrafo introdutorio, inserir um bloco informativo compacto com
 icone `Info`, contraste acessivel e o texto literal da restricao global. Nao usar
 campo, link inventado ou estado React.
 
-- [ ] **Step 2: Verify placement and copy**
+- [x] **Step 2: Verify placement and copy**
 
 Run: `rg -n -F 'As instruções para submissão da proposta estão descritas no item 7.3 do edital.' app/components/edital/TelaProposta.tsx`
 Expected: uma ocorrencia.
@@ -449,7 +449,7 @@ Validar visualmente em mobile e desktop, sem sobrepor stepper ou primeiro campo.
 - Produces: secao de divulgacao, modal acessivel e CTA `/edital`.
 - Asset contract: `const EDITAL_PDF_URL = '/edital/edital-ppi-2026.pdf'`.
 
-- [ ] **Step 1: Place and validate the official edital asset**
+- [x] **Step 1: Place and validate the official edital asset**
 
 Copiar o PDF oficial fornecido pelo usuario para o caminho do contrato. Validar:
 
@@ -459,14 +459,18 @@ Expected: `PDF document`.
 Run: `test -s public/edital/edital-ppi-2026.pdf`
 Expected: exit 0. Sem esse arquivo, a Task 8 e o aceite final permanecem incompletos.
 
-- [ ] **Step 2: Build the isolated announcement component**
+Evidencia 2026-09-11: contrato de caminho e UI do modal implementados. O PDF
+oficial ainda nao foi fornecido, portanto a validacao do asset e o aceite final
+permanecem pendentes em `Verificacoes`/Task 10.
+
+- [x] **Step 2: Build the isolated announcement component**
 
 Criar client component com estado `isModalOpen` e referencias para gatilho/fechar.
 Renderizar titulo, subtitulo, periodo e duas acoes. Usar `FileText`, `CalendarDays`,
 `ArrowRight`, `ExternalLink`, `Download` e `X` do Lucide. `Inscreva-se` e um `Link`
 para `/edital`; `Edital do Programa` abre o modal.
 
-- [ ] **Step 3: Implement accessible modal behavior**
+- [x] **Step 3: Implement accessible modal behavior**
 
 O modal deve:
 
@@ -480,7 +484,7 @@ ao gatilho. Backdrop fecha apenas quando `event.target === event.currentTarget`.
 `Abrir edital` usa `target="_blank" rel="noopener noreferrer"`; `Baixar edital`
 usa `download`. Nao usar iframe/object, mantendo a CSP atual.
 
-- [ ] **Step 4: Insert the section at the requested position**
+- [x] **Step 4: Insert the section at the requested position**
 
 Em `app/page.tsx`:
 
@@ -492,7 +496,7 @@ Em `app/page.tsx`:
 
 Nao alterar a ordem de Testimonials e RegistrationFormSection.
 
-- [ ] **Step 5: Verify navigation, modal and responsiveness**
+- [x] **Step 5: Verify navigation, modal and responsiveness**
 
 Em 390x844 e 1440x900: conferir hierarquia, texto sem overflow, botoes empilhados
 no mobile e alinhados no desktop, modal dentro do viewport, Escape/backdrop/X,
@@ -521,33 +525,33 @@ restauracao de foco, abertura/download do PDF e `/edital` no CTA.
   incrementalmente na Task 5 sem alterar o contrato HTTP.
 - Produces: contrato HTTP estável em todas as respostas do Edital e admin.
 
-- [ ] **Step 1: Map gate and draft responses through DTOs**
+- [x] **Step 1: Map gate and draft responses through DTOs**
 
 No gate, expor apenas prefill necessário à proposta, sem CPF completo ou ID
 interno. No rascunho, mapear submissão/documentos com `toSubmissionDto` e
 rejeitar campos desconhecidos no body antes de `transaction`.
 
-- [ ] **Step 2: Map upload, read, delete and submit responses**
+- [x] **Step 2: Map upload, read, delete and submit responses**
 
 Upload retorna somente `documentId`, `requirementCode`, `filename`, `mimeType`
 canonico e `uploadedAt`. Leitura retorna URL assinada apenas após autorização,
 sem S3 key. Delete retorna `{ ok: true }`; envio retorna apenas protocolo/data
 que o usuário precisa, sem payload de banco.
 
-- [ ] **Step 3: Harden admin link, thumbnail and action responses**
+- [x] **Step 3: Harden admin link, thumbnail and action responses**
 
 Admin pode receber dados administrativos necessários à revisão, mas nunca bytes,
 credenciais ou segredos. Aplicar DTO de erro e allowlist de campos em avaliação,
 desqualificação e requalificação. Separar explicitamente DTO de proponente e DTO
 administrativo, sem reutilizar um objeto amplo.
 
-- [ ] **Step 4: Add route contract tests**
+- [x] **Step 4: Add route contract tests**
 
 Usar handlers/mappers em ambiente de teste para provar: propriedade desconhecida
 é 400; sessão/token ausente é 401; propriedade alheia não revela existência;
 resposta JSON não contém `registrationId`, CPF, S3, hash ou metadados de request.
 
-- [ ] **Step 5: Run tests and inspect serialized payloads**
+- [x] **Step 5: Run tests and inspect serialized payloads**
 
 Run: `npm test` (Expected: PASS). Capturar somente fixtures sintéticas e revisar
 cada JSON público com `rg` para nomes proibidos; não usar dados reais.
