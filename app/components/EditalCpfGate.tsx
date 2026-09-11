@@ -8,8 +8,8 @@ import { setEditalSession } from '@/lib/edital-session'
 
 type GateState = 'idle' | 'validating' | 'blocked' | 'templates' | 'granted'
 
-const ANEXO_I_URL = '/edital/anexo-i-declaracao-responsabilidade.pdf'
-const ANEXO_II_URL = '/edital/anexo-ii-termo-contrapartida.pdf'
+const ANEXO_I_URL = '/edital/anexo-i-declaracao-responsabilidade.docx'
+const ANEXO_II_URL = '/edital/anexo-ii-termo-contrapartida.docx'
 
 export default function EditalCpfGate() {
   const [state, setState] = useState<GateState>('idle')

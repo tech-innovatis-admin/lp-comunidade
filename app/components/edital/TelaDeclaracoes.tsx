@@ -34,7 +34,7 @@ export default function TelaDeclaracoes({
           <span className="text-slate-500">
             (
             <a
-              href="/edital/anexo-i-declaracao-responsabilidade.pdf"
+              href="/edital/anexo-i-declaracao-responsabilidade.docx"
               download
               className="text-[#22AE84] hover:underline"
             >
@@ -42,7 +42,7 @@ export default function TelaDeclaracoes({
             </a>
             {' · '}
             <a
-              href="/edital/anexo-ii-termo-contrapartida.pdf"
+              href="/edital/anexo-ii-termo-contrapartida.docx"
               download
               className="text-[#22AE84] hover:underline"
             >
