@@ -4,6 +4,7 @@ import { query, queryOne } from '@/lib/db';
 import { calculateFileHash } from '@/lib/utils';
 import { applyNoStore, enforceRateLimit, hasValidFileSignature, isTrustedOrigin } from '@/lib/security';
 import { verifyEditalToken } from '@/lib/edital-auth';
+import { validateEditalDocumentBuffer } from '@/lib/edital-document-validation';
 import {
   EDITAL_MAX_DOCUMENT_BYTES,
   EDITAL_MAX_PHOTO_BYTES,
@@ -98,9 +99,11 @@ async function getSubmissionPhotoCount(submissionId: number): Promise<number> {
   return Number.parseInt(row?.count || '0', 10);
 }
 
-function validateDocumentFile(requirementCode: EditalDocumentRequirementCode, file: File, buffer: Buffer) {
+function validateDocumentFile(requirementCode: EditalDocumentRequirementCode, file: File, buffer: Buffer): string {
   if (isPhotoDocumentCode(requirementCode)) {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type.toLowerCase())) {
+    const photoMimeType = file.type.toLowerCase();
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(photoMimeType)) {
       throw new Error('Formato de foto inválido');
     }
 
@@ -112,20 +115,19 @@ function validateDocumentFile(requirementCode: EditalDocumentRequirementCode, fi
       throw new Error('Assinatura da foto inválida');
     }
 
-    return;
-  }
-
-  if (file.type.toLowerCase() !== 'application/pdf') {
-    throw new Error('Documento deve ser PDF');
+    return photoMimeType;
   }
 
   if (buffer.length > EDITAL_MAX_DOCUMENT_BYTES) {
-    throw new Error('PDF acima do limite permitido');
+    throw new Error('Documento acima do limite permitido');
   }
 
-  if (!hasValidFileSignature(buffer, file.type)) {
-    throw new Error('Assinatura do PDF inválida');
+  const validation = validateEditalDocumentBuffer(file.name, file.type, buffer);
+  if (!validation.valid) {
+    throw new Error(validation.error);
   }
+
+  return validation.mimeType;
 }
 
 export async function POST(request: NextRequest) {
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    validateDocumentFile(requirementCode as EditalDocumentRequirementCode, file, buffer);
+    const mimeType = validateDocumentFile(requirementCode as EditalDocumentRequirementCode, file, buffer);
 
     const submissionId = await getOrCreateSubmissionId(registrationId);
 
@@ -186,7 +188,7 @@ export async function POST(request: NextRequest) {
     const fileHash = calculateFileHash(buffer);
     const s3Key = `edital-submissions/${submissionId}/${randomUUID()}-${requirementCode}`;
 
-    const upload = await uploadFileToKey(buffer, s3Key, file.type || 'application/octet-stream');
+    const upload = await uploadFileToKey(buffer, s3Key, mimeType);
 
     const documentRow = isPhotoDocumentCode(requirementCode)
       ? await queryOne<{ id: number; uploaded_at: Date }>(
@@ -208,7 +210,7 @@ export async function POST(request: NextRequest) {
             requirementCode,
             upload.filePath,
             fileHash,
-            file.type || 'application/octet-stream',
+            mimeType,
             buffer.length,
             sanitizedFilename,
           ]
@@ -237,7 +239,7 @@ export async function POST(request: NextRequest) {
             requirementCode,
             upload.filePath,
             fileHash,
-            file.type || 'application/octet-stream',
+            mimeType,
             buffer.length,
             sanitizedFilename,
           ]
@@ -253,7 +255,7 @@ export async function POST(request: NextRequest) {
         documentId: documentRow.id,
         requirementCode,
         filename: sanitizedFilename,
-        mimeType: file.type || 'application/octet-stream',
+        mimeType,
         uploadedAt: documentRow.uploaded_at,
       }),
     });
