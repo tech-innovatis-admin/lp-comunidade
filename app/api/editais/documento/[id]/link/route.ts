@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { getSignedFileUrl } from '@/lib/s3';
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { getDocumentAccessDisposition } from '@/lib/edital-document-access';
+import { parseDatabaseId } from '@/lib/database-id';
 
 export async function GET(
   request: NextRequest,
@@ -24,14 +26,14 @@ export async function GET(
     }
 
     const { id } = await params;
-    const documentId = Number.parseInt(id, 10);
+    const documentId = parseDatabaseId(id);
 
-    if (!Number.isFinite(documentId)) {
+    if (documentId === null) {
       return NextResponse.json({ error: 'Documento inválido' }, { status: 400 });
     }
 
-    const document = await queryOne<{ s3_key: string }>(
-      `SELECT s3_key
+    const document = await queryOne<{ s3_key: string; mime_type: string; original_filename: string | null }>(
+      `SELECT s3_key, mime_type, original_filename
        FROM edital_submission_documents
        WHERE id = $1
        LIMIT 1`,
@@ -42,9 +44,8 @@ export async function GET(
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 });
     }
 
-    // Sem downloadFileName: abre em visualização inline no navegador (PDF/imagem),
-    // já que este link é usado pelo time pra revisar o conteúdo, não pra baixar.
-    const url = await getSignedFileUrl(document.s3_key, 300);
+    const disposition = getDocumentAccessDisposition(document.mime_type, document.original_filename);
+    const url = await getSignedFileUrl(document.s3_key, 300, disposition.downloadFileName);
 
     return NextResponse.redirect(url, {
       status: 302,

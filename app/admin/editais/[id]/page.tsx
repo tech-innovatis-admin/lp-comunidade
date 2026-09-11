@@ -48,6 +48,7 @@ interface DocumentRow {
   id: number
   requirement_code: string
   original_filename: string | null
+  mime_type: string
 }
 
 async function loadSubmission(id: number): Promise<SubmissionDetailRow | null> {
@@ -69,7 +70,7 @@ async function loadSubmission(id: number): Promise<SubmissionDetailRow | null> {
 
 async function loadDocuments(submissionId: number): Promise<DocumentRow[]> {
   return query<DocumentRow>(
-    `SELECT id, requirement_code, original_filename
+    `SELECT id, requirement_code, original_filename, mime_type
      FROM edital_submission_documents
      WHERE submission_id = $1
      ORDER BY id`,
@@ -143,7 +144,8 @@ function DocumentGrid({
             key={code}
             thumbnailUrl={`/api/editais/documento/${doc.id}/thumbnail`}
             openUrl={`/api/editais/documento/${doc.id}/link`}
-            label={label}
+            label={doc.original_filename || label}
+            mimeType={doc.mime_type}
           />
         )
       })}
@@ -320,6 +322,7 @@ export default async function AdminEditalDetailPage({
                 thumbnailUrl={`/api/editais/documento/${photosPdf.id}/thumbnail`}
                 openUrl={`/api/editais/documento/${photosPdf.id}/link`}
                 label={photosPdf.original_filename || 'Registro fotográfico (PDF)'}
+                mimeType={photosPdf.mime_type}
               />
             </div>
           ) : photos.length === 0 ? (
@@ -332,6 +335,7 @@ export default async function AdminEditalDetailPage({
                   thumbnailUrl={`/api/editais/documento/${photo.id}/thumbnail`}
                   openUrl={`/api/editais/documento/${photo.id}/link`}
                   label={photo.original_filename || 'Foto do laboratório'}
+                  mimeType={photo.mime_type}
                   aspectClassName="aspect-square"
                 />
               ))}

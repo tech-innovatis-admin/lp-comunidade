@@ -360,7 +360,7 @@ nesta execucao.
 - Consumes: `EditalDocumentKind`/detector da Task 2 e ID normalizada da Task 5.
 - Produces: Word por download; preview somente para PDF/imagens.
 
-- [ ] **Step 1: Return filenames and MIME from document lookups**
+- [x] **Step 1: Return filenames and MIME from document lookups**
 
 Incluir `mime_type` e `original_filename` nos SELECTs do link do proponente e
 do admin. Para DOC/DOCX chamar:
@@ -371,23 +371,42 @@ getSignedFileUrl(s3Key, expiresIn, sanitizedOriginalFilename)
 
 Para PDF/imagem, omitir `downloadFileName` e preservar abertura inline.
 
-- [ ] **Step 2: Prevent Word thumbnail generation**
+Evidencia 2026-09-11: criado `lib/edital-document-access.ts` para decidir
+disposition e nome sanitizado; as rotas de link do proponente e admin selecionam
+`mime_type`/`original_filename` e passam `downloadFileName` somente para DOC/DOCX.
+PDFs e imagens continuam sem disposition de attachment.
+
+- [x] **Step 2: Prevent Word thumbnail generation**
 
 Na rota de thumbnail, permitir somente `application/pdf` e MIME de imagem aceito.
 Responder 415 `{ error: 'Pré-visualização indisponível para este formato' }`
 antes de baixar o objeto quando for Word ou outro MIME.
 
-- [ ] **Step 3: Render a Word fallback without requesting the thumbnail route**
+Evidencia 2026-09-11: rota admin de thumbnail usa `isThumbnailMimeTypeSupported`
+e responde 415 com a mensagem controlada antes de baixar o objeto quando o MIME
+nao e PDF/JPEG/PNG/WEBP. IDs da rota foram normalizados com `parseDatabaseId`.
+
+- [x] **Step 3: Render a Word fallback without requesting the thumbnail route**
 
 Ampliar `ThumbnailCard` com `mimeType`. Para DOC/DOCX, renderizar diretamente
 `FileText`, extensao e label dentro do link `openUrl`; para PDF/imagem manter `<img>`
 e fallback `onError`. Atualizar a query/pontos de uso na pagina para passar MIME.
 
-- [ ] **Step 4: Verify admin behavior**
+Evidencia 2026-09-11: `ThumbnailCard` recebe `mimeType` e renderiza fallback
+direto para Word, sem `<img>`/thumbnail route. A pagina admin seleciona
+`mime_type` e passa o MIME nos documentos/fotos do Edital.
+
+- [x] **Step 4: Verify admin behavior**
 
 Testar com sessao admin em ambiente descartavel: PDF mostra thumbnail; Word mostra
 fallback e baixa com nome original; requisicao direta de thumbnail Word retorna
 415; usuario sem sessao recebe 401. Confirmar que fotos e PDFs gerados continuam iguais.
+
+Evidencia 2026-09-11: RED `npm test` falhou por
+`Cannot find module './edital-document-access'`; GREEN `npm test` passou com 41
+testes; `npx tsc --noEmit` terminou com exit 0; `ReadLints` nao encontrou erros
+nos arquivos alterados. Matriz manual admin adiada por nao haver ambiente
+descartavel com sessao/admin e arquivos S3 autorizados nesta execucao.
 
 ---
 

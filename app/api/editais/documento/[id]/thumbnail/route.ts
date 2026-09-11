@@ -11,14 +11,8 @@ import { query, queryOne } from '@/lib/db';
 import { getFileBytes, uploadFileToKey } from '@/lib/s3';
 import { verifyAdminSession } from '@/lib/admin-session';
 import { generateThumbnailFromPdf, generateThumbnailFromImage } from '@/lib/thumbnail';
-import { toStableErrorDto } from '@/lib/edital-dto-validation';
-
-const THUMBNAILABLE_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-]);
+import { isThumbnailMimeTypeSupported } from '@/lib/edital-document-access';
+import { parseDatabaseId } from '@/lib/database-id';
 
 interface DocumentRow {
   id: number;
@@ -39,9 +33,9 @@ export async function GET(
     }
 
     const { id } = await params;
-    const documentId = Number.parseInt(id, 10);
+    const documentId = parseDatabaseId(id);
 
-    if (!Number.isFinite(documentId)) {
+    if (documentId === null) {
       return NextResponse.json({ error: 'Documento inválido' }, { status: 400 });
     }
 
@@ -57,9 +51,9 @@ export async function GET(
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 });
     }
 
-    if (!THUMBNAILABLE_MIME_TYPES.has(document.mime_type)) {
+    if (!isThumbnailMimeTypeSupported(document.mime_type)) {
       return NextResponse.json(
-        toStableErrorDto(null, { error: 'unsupported_mime', fallbackMessage: 'Tipo de arquivo sem suporte para miniatura' }),
+        { error: 'Pré-visualização indisponível para este formato' },
         { status: 415 }
       );
     }

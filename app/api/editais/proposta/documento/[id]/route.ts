@@ -4,6 +4,7 @@ import { applyNoStore, enforceRateLimit, isTrustedOrigin } from '@/lib/security'
 import { verifyEditalToken } from '@/lib/edital-auth';
 import { deleteFile, getSignedFileUrl } from '@/lib/s3';
 import { parseDatabaseId } from '@/lib/database-id';
+import { getDocumentAccessDisposition } from '@/lib/edital-document-access';
 
 type DocumentOwnerRow = {
   id: number | string;
@@ -11,6 +12,8 @@ type DocumentOwnerRow = {
   s3_key: string;
   thumbnail_s3_key?: string | null;
   requirement_code: string;
+  mime_type: string;
+  original_filename: string | null;
   registration_id: number | string;
   status: 'DRAFT' | 'SUBMITTED';
 };
@@ -36,6 +39,8 @@ async function loadDocument(documentId: number) {
         d.submission_id,
         d.s3_key,
         d.requirement_code,
+        d.mime_type,
+        d.original_filename,
         s.registration_id,
         s.status
       FROM edital_submission_documents d
@@ -94,7 +99,8 @@ export async function GET(
       return jsonResponse({ error: 'Documento não encontrado' }, { status: 404 });
     }
 
-    const url = await getSignedFileUrl(document.s3_key, 900);
+    const disposition = getDocumentAccessDisposition(document.mime_type, document.original_filename);
+    const url = await getSignedFileUrl(document.s3_key, 900, disposition.downloadFileName);
 
     return jsonResponse({
       ok: true,
