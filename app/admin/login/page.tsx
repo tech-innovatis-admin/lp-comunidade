@@ -7,6 +7,7 @@ import { User, Lock, Loader2, AlertCircle, Shield } from 'lucide-react'
 const DEFAULT_NEXT_PATH = '/admin/editais?tab=pendentes'
 
 const SSO_ERROR_MESSAGES: Record<string, string> = {
+  broker_denied: 'Login SSO cancelado ou negado.',
   cognito_denied: 'Login SSO cancelado ou negado.',
   missing_code: 'Resposta SSO incompleta. Tente novamente.',
   missing_oauth_cookie: 'Sessão SSO expirou. Inicie o login de novo.',
@@ -59,10 +60,11 @@ export default function AdminLoginPage() {
         const data = (await response.json()) as {
           credentials?: boolean
           cognito?: boolean
+          sso?: boolean
         }
         if (!cancelled) {
           setShowCredentials(data.credentials !== false)
-          setShowSso(Boolean(data.cognito))
+          setShowSso(Boolean(data.sso ?? data.cognito))
         }
       } catch {
         // keep legacy defaults

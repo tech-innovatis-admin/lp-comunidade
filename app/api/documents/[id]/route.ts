@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { calculateFileHash } from '@/lib/utils';
-import { ADMIN_SESSION_COOKIE_NAME, verifyAdminSessionToken } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 import { unauthenticatedAdminPath } from '@/lib/authMode';
 
 export async function GET(
@@ -26,8 +26,8 @@ export async function GET(
       );
     }
 
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    if (!verifyAdminSessionToken(token)) {
+    const session = await verifyAdminSession();
+    if (!session) {
       return NextResponse.redirect(
         new URL(unauthenticatedAdminPath(), request.url),
         { status: 307 }

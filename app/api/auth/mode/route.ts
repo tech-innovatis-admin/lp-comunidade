@@ -8,8 +8,8 @@ import {
   getAuthMode,
   ssoEnabled,
 } from '@/lib/authMode';
-import { applyNoStore } from '@/lib/security';
 import { EDITAL_ADMIN_PLATFORM_TAG } from '@/lib/platforms-db';
+import { applyNoStore } from '@/lib/security';
 
 export async function GET() {
   const mode = getAuthMode();
@@ -17,11 +17,11 @@ export async function GET() {
     NextResponse.json({
       mode,
       credentials: credentialsEnabled(mode),
-      cognito: cognitoEnabled(mode),
       broker: brokerEnabled(mode),
       sso: ssoEnabled(mode),
+      cognito: cognitoEnabled(mode),
       centralConfigured: centralOidcConfigured(),
       platformCode: process.env.PLATFORM_CODE || EDITAL_ADMIN_PLATFORM_TAG,
-    })
+    }),
   );
 }

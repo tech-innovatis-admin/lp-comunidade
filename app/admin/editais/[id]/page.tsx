@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Users, Building2, FileText, Camera, FileCheck, Award, ArrowLeft } from 'lucide-react'
 import { query, queryOne } from '@/lib/db'
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
+import { verifyAdminSession } from '@/lib/admin-session'
 import { unauthenticatedAdminPath } from '@/lib/authMode'
 import { EDITAL_DOCUMENT_LABELS, EDITAL_STEP_BY_DOCUMENT_CODE } from '@/lib/edital-completeness'
 import {
@@ -165,10 +164,8 @@ export default async function AdminEditalDetailPage({
     notFound()
   }
 
-  const cookieStore = await cookies()
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
-
-  if (!verifyAdminSessionToken(token)) {
+  const session = await verifyAdminSession()
+  if (!session) {
     redirect(unauthenticatedAdminPath())
   }
 

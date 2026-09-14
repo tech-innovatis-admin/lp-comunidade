@@ -13,6 +13,9 @@ export interface AdminSessionIdentity {
   userId: number;
   username: string;
   name: string;
+  sid?: string;
+  authz_version?: number;
+  brokerSub?: string;
 }
 
 interface AdminTokenPayload extends AdminSessionIdentity {
@@ -102,5 +105,12 @@ export function verifyAdminSessionToken(token: string | undefined | null): Admin
     return null;
   }
 
-  return { userId: payload.userId, username: payload.username, name: payload.name };
+  return {
+    userId: payload.userId,
+    username: payload.username,
+    name: payload.name,
+    sid: payload.sid,
+    authz_version: payload.authz_version,
+    brokerSub: payload.brokerSub,
+  };
 }
