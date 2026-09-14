@@ -57,12 +57,13 @@ A secao/modal da home (`EditalAnnouncementSection`) so aparece a partir de
 `NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT`). A rota `/edital` nao e
 bloqueada por esse horario.
 
-Pendente antes do aceite final: fornecer e copiar
-`public/edital/edital-ppi-2026.pdf`, validar esse asset e executar a matriz
-manual em ambiente descartavel autorizado. As validacoes manuais de upload real,
-exclusao/reload, propriedade/status, admin PDF/Word, modal por mouse/teclado e
-CTA `/edital` ficaram diferidas. Nenhum banco, S3, webhook, migration ou deploy
-foi executado nesta etapa.
+Assets oficiais em `public/edital/`:
+- `edital-ppi-2026.pdf` (Edital de Patrocinio PPI)
+- `termo-de-patrocinio.pdf` (Termo de Patrocinio)
+- anexos I/II em `.docx`
+
+Pendencias: matriz manual completa em ambiente descartavel; PDF oficial ja
+publicado localmente.
 
 ## Lacunas por inspecao
 

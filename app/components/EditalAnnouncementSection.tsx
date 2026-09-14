@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, CalendarDays, Download, ExternalLink, FileText, X } from 'lucide-react'
 
 const EDITAL_PDF_URL = '/edital/edital-ppi-2026.pdf'
+const TERMO_PDF_URL = '/edital/termo-de-patrocinio.pdf'
 const EDITAL_TITLE = 'Edital PPI 2026'
 const EDITAL_SUBTITLE = 'Apoio ao fortalecimento e modernização de laboratórios'
 const EDITAL_PERIOD = 'Inscrições: 17/09 a 04/10/2026'
@@ -208,6 +209,15 @@ export default function EditalAnnouncementSection() {
                 >
                   Baixar edital
                   <Download className="h-4 w-4" aria-hidden="true" />
+                </a>
+                <a
+                  href={TERMO_PDF_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-900 transition hover:border-[#EA5B0C] hover:text-[#EA5B0C] focus:outline-none focus:ring-2 focus:ring-[#EA5B0C] focus:ring-offset-2 sm:col-span-2"
+                >
+                  Abrir termo de patrocínio
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 </a>
               </div>
             </div>
