@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Ultima revisao: 2026-09-11.
+Ultima revisao: 2026-09-14.
 Base: checkout sobre `24d1778`, com alteracoes preexistentes nao commitadas.
 Este documento nao certifica o estado de producao.
 
@@ -51,6 +51,11 @@ Verificacoes executadas em 2026-09-11: `npm test` passou com 41 testes;
 As buscas `rg` exigidas nao encontraram links executaveis para PDFs antigos dos
 anexos; a unica ocorrencia restante de `application/pdf` em
 `app/components/edital` e deteccao de preview em `DocumentUploadSlot.tsx`.
+
+A secao/modal da home (`EditalAnnouncementSection`) so aparece a partir de
+`2026-09-15T06:00:00-03:00` (override opcional:
+`NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT`). A rota `/edital` nao e
+bloqueada por esse horario.
 
 Pendente antes do aceite final: fornecer e copiar
 `public/edital/edital-ppi-2026.pdf`, validar esse asset e executar a matriz

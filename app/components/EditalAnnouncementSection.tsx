@@ -10,10 +10,42 @@ const EDITAL_TITLE = 'Edital PPI 2026'
 const EDITAL_SUBTITLE = 'Apoio ao fortalecimento e modernização de laboratórios'
 const EDITAL_PERIOD = 'Inscrições: 17/09 a 04/10/2026'
 
+/** Divulgação na home só após este instante (America/Sao_Paulo). Override: NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT */
+const DEFAULT_AVAILABLE_AT = '2026-09-15T06:00:00-03:00'
+
+function resolveAvailableAt(): number {
+  const raw = process.env.NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT ?? DEFAULT_AVAILABLE_AT
+  const parsed = Date.parse(raw)
+  return Number.isFinite(parsed) ? parsed : Date.parse(DEFAULT_AVAILABLE_AT)
+}
+
 export default function EditalAnnouncementSection() {
+  const [isVisible, setIsVisible] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const triggerButtonRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const availableAt = resolveAvailableAt()
+    const showIfReady = () => {
+      if (Date.now() >= availableAt) {
+        setIsVisible(true)
+        return true
+      }
+      return false
+    }
+
+    if (showIfReady()) {
+      return
+    }
+
+    const remainingMs = Math.max(availableAt - Date.now(), 0)
+    const timer = window.setTimeout(() => {
+      setIsVisible(true)
+    }, remainingMs)
+
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -45,6 +77,10 @@ export default function EditalAnnouncementSection() {
     if (event.target === event.currentTarget) {
       closeModal()
     }
+  }
+
+  if (!isVisible) {
+    return null
   }
 
   return (
