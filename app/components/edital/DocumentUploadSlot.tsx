@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { FileText, Upload, X, Loader2, Eye, AlertCircle } from 'lucide-react'
+import { FileText, Upload, X, Loader2, Eye, Download, AlertCircle } from 'lucide-react'
 import {
   EditalSubmissionDocument,
   EditalApiError,
@@ -45,6 +45,9 @@ export default function DocumentUploadSlot({
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const isPdfDocument = document?.mimeType.toLowerCase() === 'application/pdf'
+  const fileActionLabel = isPdfDocument ? 'Ver arquivo' : 'Baixar arquivo'
+  const FileActionIcon = isPdfDocument ? Eye : Download
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -65,9 +68,9 @@ export default function DocumentUploadSlot({
         id: result.documentId,
         requirementCode: result.requirementCode,
         originalFilename: result.filename,
-        mimeType: file.type,
+        mimeType: result.mimeType ?? file.type,
         sizeBytes: file.size,
-        uploadedAt: new Date().toISOString(),
+        uploadedAt: result.uploadedAt ?? new Date().toISOString(),
       })
     } catch (err) {
       if (err instanceof EditalApiError && err.reason === 'token_expired') {
@@ -161,9 +164,10 @@ export default function DocumentUploadSlot({
               type="button"
               onClick={handleView}
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-              aria-label="Ver arquivo"
+              aria-label={fileActionLabel}
+              title={fileActionLabel}
             >
-              <Eye className="w-4 h-4 text-slate-400 hover:text-[#22AE84]" />
+              <FileActionIcon className="w-4 h-4 text-slate-400 hover:text-[#22AE84]" />
             </button>
             <button
               type="button"

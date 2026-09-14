@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { query } from '@/lib/db'
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth'
+import { verifyAdminSession } from '@/lib/admin-session'
 import { unauthenticatedAdminPath } from '@/lib/authMode'
 import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
 
@@ -197,10 +196,8 @@ export default async function AdminEditaisPage({
   const nextPath =
     tab === 'ranking' || tab === 'rejeitadas' ? `/admin/editais?tab=${tab}` : '/admin/editais'
 
-  const cookieStore = await cookies()
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value
-
-  if (!verifyAdminSessionToken(token)) {
+  const session = await verifyAdminSession()
+  if (!session) {
     redirect(unauthenticatedAdminPath())
   }
 

@@ -70,6 +70,18 @@ export async function findPlatformUserByEmail(email: string): Promise<PlatformUs
   return result.rows[0] || null;
 }
 
+export async function findPlatformUserById(id: number): Promise<PlatformUserRow | null> {
+  const result = await platformsPool.query<PlatformUserRow>(
+    `SELECT id::integer, username, name, email, hash, platforms, cognito_sub
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [id]
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function linkPlatformUserCognitoSub(userId: number, sub: string): Promise<void> {
   await platformsPool.query(
     `UPDATE users

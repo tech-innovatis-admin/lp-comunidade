@@ -4,13 +4,24 @@ import {
   createAdminSessionToken,
   ADMIN_SESSION_COOKIE_NAME,
 } from '@/lib/admin-auth';
-import { cognitoEnabled } from '@/lib/authMode';
+import {
+  brokerEnabled,
+  centralOidcConfigured,
+  cognitoEnabled,
+} from '@/lib/authMode';
+import {
+  CentralOidcConfigError,
+  cookieSecure,
+  decryptTransaction,
+  exchangeCentralCallback,
+  hasCentralPlatformAccess,
+  publicAppOrigin,
+  TRANSACTION_COOKIE,
+} from '@/lib/centralOidc';
 import {
   CognitoConfigError,
-  cookieSecure,
   decodeOAuthCookie,
   exchangeCode,
-  publicAppOrigin,
   verifyIdToken,
   buildLogoutUrl,
   isSilentAuthError,
@@ -20,9 +31,11 @@ import {
 import {
   findPlatformUserByCognitoSub,
   findPlatformUserByEmail,
+  findPlatformUserById,
   hasEditalAdminAccess,
   linkPlatformUserCognitoSub,
 } from '@/lib/platforms-db';
+import { safeReturnTo } from '@/lib/redirectTarget';
 
 const OAUTH_COOKIE = 'comunidade_oauth';
 const DEFAULT_NEXT = '/admin/editais?tab=pendentes';
@@ -33,11 +46,97 @@ function errorRedirect(request: NextRequest, code: string) {
   return NextResponse.redirect(url);
 }
 
+function adminSessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: cookieSecure(),
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  };
+}
+
 export async function GET(request: NextRequest) {
-  if (!cognitoEnabled()) {
-    return NextResponse.json({ error: 'SSO Cognito desabilitado.' }, { status: 404 });
+  if (brokerEnabled() && centralOidcConfigured()) {
+    return brokerCallback(request);
   }
 
+  if (!cognitoEnabled()) {
+    return NextResponse.json({ error: 'SSO desabilitado.' }, { status: 404 });
+  }
+
+  return cognitoCallback(request);
+}
+
+async function brokerCallback(request: NextRequest) {
+  const oauthError = request.nextUrl.searchParams.get('error');
+  if (oauthError) {
+    return errorRedirect(request, 'broker_denied');
+  }
+
+  const code = request.nextUrl.searchParams.get('code');
+  const state = request.nextUrl.searchParams.get('state');
+  if (!code || !state) {
+    return errorRedirect(request, 'missing_code');
+  }
+
+  const rawCookie = request.cookies.get(TRANSACTION_COOKIE)?.value;
+  if (!rawCookie) {
+    return errorRedirect(request, 'missing_oauth_cookie');
+  }
+
+  const oauth = await decryptTransaction(rawCookie);
+  if (!oauth) {
+    return errorRedirect(request, 'invalid_oauth_cookie');
+  }
+
+  if (oauth.state !== state) {
+    return errorRedirect(request, 'state_mismatch');
+  }
+
+  try {
+    const identity = await exchangeCentralCallback({
+      callbackUrl: request.nextUrl,
+      expectedState: oauth.state,
+      expectedNonce: oauth.nonce,
+      codeVerifier: oauth.code_verifier,
+    });
+
+    if (!hasCentralPlatformAccess(identity)) {
+      return errorRedirect(request, 'user_not_linked');
+    }
+
+    if (!identity.userId) {
+      return errorRedirect(request, 'user_not_linked');
+    }
+
+    const user = await findPlatformUserById(identity.userId);
+    if (!hasEditalAdminAccess(user)) {
+      return errorRedirect(request, 'user_not_linked');
+    }
+
+    const sessionToken = createAdminSessionToken({
+      userId: user!.id,
+      username: user!.username || identity.email || String(user!.id),
+      name: user!.name,
+      sid: identity.sid,
+      authz_version: identity.authzVersion,
+      brokerSub: identity.sub,
+    });
+
+    const response = NextResponse.redirect(
+      new URL(safeReturnTo(oauth.returnTo, DEFAULT_NEXT), publicAppOrigin(request)),
+    );
+    response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionToken, adminSessionCookieOptions());
+    response.cookies.set(TRANSACTION_COOKIE, '', { ...adminSessionCookieOptions(), maxAge: 0 });
+    return response;
+  } catch (err) {
+    console.error('[auth/callback/broker]', err instanceof CentralOidcConfigError ? err.message : err);
+    return errorRedirect(request, 'callback_failed');
+  }
+}
+
+async function cognitoCallback(request: NextRequest) {
   const oauthError = request.nextUrl.searchParams.get('error');
   if (oauthError) {
     if (isSilentAuthError(oauthError)) {
@@ -103,23 +202,11 @@ export async function GET(request: NextRequest) {
     });
 
     const response = NextResponse.redirect(new URL(DEFAULT_NEXT, publicAppOrigin(request)));
-    response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: cookieSecure(),
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-    response.cookies.set(OAUTH_COOKIE, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: cookieSecure(),
-      path: '/',
-      maxAge: 0,
-    });
+    response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionToken, adminSessionCookieOptions());
+    response.cookies.set(OAUTH_COOKIE, '', { ...adminSessionCookieOptions(), maxAge: 0 });
     return response;
   } catch (err) {
-    console.error('[auth/callback]', err instanceof CognitoConfigError ? err.message : err);
+    console.error('[auth/callback/cognito]', err instanceof CognitoConfigError ? err.message : err);
     return errorRedirect(request, 'callback_failed');
   }
 }

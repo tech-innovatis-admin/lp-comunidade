@@ -8,15 +8,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db';
 import { getSignedFileUrl } from '@/lib/s3';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ registrationId: string }> }
 ) {
   try {
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    if (!verifyAdminSessionToken(token)) {
+    const session = await verifyAdminSession();
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

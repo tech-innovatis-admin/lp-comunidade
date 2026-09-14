@@ -43,6 +43,8 @@ npm run update-term-v1.0
 
 ## Documentacao principal
 
+- [AGENTS.md](AGENTS.md) - instrucoes compartilhadas para agentes de IA
+- [.context/README.md](.context/README.md) - contexto, arquitetura, estado, specs e planos
 - [MDs/README.md](MDs/README.md)
 - [MDs/INDICE_DOCUMENTACAO.md](MDs/INDICE_DOCUMENTACAO.md)
 - [MDs/BACKEND.md](MDs/BACKEND.md)

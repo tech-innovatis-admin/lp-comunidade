@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { getFileBytes, uploadFileToKey } from '@/lib/s3';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 import { generateThumbnailFromPdf } from '@/lib/thumbnail';
 
 interface RegistrationRow {
@@ -23,8 +23,8 @@ export async function GET(
   { params }: { params: Promise<{ registrationId: string }> }
 ) {
   try {
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    if (!verifyAdminSessionToken(token)) {
+    const session = await verifyAdminSession();
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 

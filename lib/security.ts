@@ -176,6 +176,19 @@ export function hasValidFileSignature(buffer: Buffer, mimeType: string): boolean
     return buffer.length >= 5 && buffer.subarray(0, 5).equals(Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]));
   }
 
+  if (fileType === 'application/msword') {
+    return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+  }
+
+  if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    return (
+      buffer.length >= 4 &&
+      buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04])) &&
+      buffer.includes(Buffer.from('[Content_Types].xml')) &&
+      buffer.includes(Buffer.from('word/document.xml'))
+    );
+  }
+
   if (fileType === 'image/png') {
     return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   }

@@ -9,8 +9,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { getFileBytes, uploadFileToKey } from '@/lib/s3';
-import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE_NAME } from '@/lib/admin-auth';
+import { verifyAdminSession } from '@/lib/admin-session';
 import { generateThumbnailFromPdf, generateThumbnailFromImage } from '@/lib/thumbnail';
+import { isThumbnailMimeTypeSupported } from '@/lib/edital-document-access';
+import { parseDatabaseId } from '@/lib/database-id';
 
 interface DocumentRow {
   id: number;
@@ -25,15 +27,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-    if (!verifyAdminSessionToken(token)) {
+    const session = await verifyAdminSession();
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const { id } = await params;
-    const documentId = Number.parseInt(id, 10);
+    const documentId = parseDatabaseId(id);
 
-    if (!Number.isFinite(documentId)) {
+    if (documentId === null) {
       return NextResponse.json({ error: 'Documento inválido' }, { status: 400 });
     }
 
@@ -47,6 +49,13 @@ export async function GET(
 
     if (!document) {
       return NextResponse.json({ error: 'Documento não encontrado' }, { status: 404 });
+    }
+
+    if (!isThumbnailMimeTypeSupported(document.mime_type)) {
+      return NextResponse.json(
+        { error: 'Pré-visualização indisponível para este formato' },
+        { status: 415 }
+      );
     }
 
     let thumbnailKey = document.thumbnail_s3_key;

@@ -8,6 +8,7 @@
     "postbuild": "node scripts/fix-standalone-runtime.cjs",
     "start": "next start",
     "lint": "next lint",
+    "test": "tsx --test lib/*.test.ts lib/*.test.mjs",
     "migrate": "node run-migration.js",
     "update-term-v1.0": "tsx scripts/update-term-v1.0.ts"
   },
@@ -24,6 +25,7 @@
     "jose": "^6.2.8",
     "lucide-react": "^0.525.0",
     "next": "^15.5.20",
+    "openid-client": "^6.8.8",
     "pdf-lib": "^1.17.1",
     "pdf-to-img": "^6.2.0",
     "pg": "^8.13.1",
