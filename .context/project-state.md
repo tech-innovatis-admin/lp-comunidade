@@ -59,11 +59,10 @@ bloqueada por esse horario.
 
 Assets oficiais em `public/edital/`:
 - `edital-ppi-2026.pdf` (Edital de Patrocinio PPI)
-- `termo-de-patrocinio.pdf` (Termo de Patrocinio)
 - anexos I/II em `.docx`
 
-Pendencias: matriz manual completa em ambiente descartavel; PDF oficial ja
-publicado localmente.
+O Termo de Patrocinio foi retirado da UI/public por ora; sera liberado
+depois, quando o time autorizar.
 
 ## Lacunas por inspecao
 
