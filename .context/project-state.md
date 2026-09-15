@@ -25,7 +25,7 @@ inferir que suporte a broker esta publicado.
 
 Spec: [upload documental e painel admin](specs/2026-09-15-edital-upload-admin-preview.md).
 Plano: [implementacao](plans/2026-09-15-edital-upload-admin-preview.md).
-Status: implementado localmente; commit/deploy sob pedido nesta sessao.
+Status: commitado e publicado em producao (`landingpage:1.1.9`).
 
 Entregas:
 - Documentais aceitam PDF/DOC/DOCX/JPG/PNG/WEBP com assinatura binaria.
@@ -33,6 +33,9 @@ Entregas:
 - Admin detalhe com layout mais amplo, captions e ThumbnailCard aprimorado.
 
 Verificacao 2026-09-15: `npm test` — 43 testes, exit 0.
+Deploy 2026-09-15: imagem `1.1.9` no ECR; container em `127.0.0.1:3001`
+(nginx comunidade); health/home/edital HTTP 200. DBEM restaurado em `:3002`
+apos conflito de porta no recreate.
 
 Atividade anterior de divulgacao (docs/home/gate 6h) permanece no historico
 de [2026-09-11](specs/2026-09-11-edital-documentos-divulgacao.md). Assets em
@@ -52,5 +55,5 @@ de [2026-09-11](specs/2026-09-11-edital-documentos-divulgacao.md). Assets em
 
 ## Proximo passo
 
-Aceite visual local (wizard upload + admin detalhe). Commit/deploy somente
-quando solicitado.
+N8N: garantir workflow de producao usando `protocolNumber` (nao `id`).
+Monitorar health do container se Docker marcar unhealthy apesar do `/api/health` 200.
