@@ -10,6 +10,7 @@ import {
   EDITAL_STEP_BY_DOCUMENT_CODE,
 } from '@/lib/edital-completeness'
 import { EDITAL_MIN_PHOTO_COUNT } from '@/lib/edital-requirements'
+import { formatDateTimeSaoPaulo } from '@/lib/datetime-br'
 
 interface TelaRevisaoProps {
   data: EditalWizardData
@@ -71,7 +72,7 @@ export default function TelaRevisao({
           <CheckCircle2 className="w-12 h-12 text-[#22AE84] mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Proposta enviada</h2>
           {submittedAt && (
-            <p className="text-slate-400">Enviada em {new Date(submittedAt).toLocaleString('pt-BR')}</p>
+            <p className="text-slate-400">Enviada em {formatDateTimeSaoPaulo(submittedAt)}</p>
           )}
         </div>
         <ul className="space-y-2">

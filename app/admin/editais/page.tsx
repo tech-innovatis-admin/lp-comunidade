@@ -5,6 +5,7 @@ import { query } from '@/lib/db'
 import { verifyAdminSession } from '@/lib/admin-session'
 import { unauthenticatedAdminPath } from '@/lib/authMode'
 import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
+import { formatDateTimeSaoPaulo } from '@/lib/datetime-br'
 
 type Tab = 'pendentes' | 'ranking' | 'rejeitadas'
 
@@ -111,7 +112,7 @@ async function PendingList() {
             )}
           </div>
           <p className="text-xs text-slate-500 flex-shrink-0">
-            {new Date(submission.submitted_at).toLocaleString('pt-BR')}
+            {formatDateTimeSaoPaulo(submission.submitted_at)}
           </p>
         </CardShell>
       ))}
@@ -177,7 +178,7 @@ async function RejectedList() {
             )}
           </div>
           <p className="text-xs text-slate-500 flex-shrink-0">
-            {new Date(submission.disqualified_at).toLocaleString('pt-BR')}
+            {formatDateTimeSaoPaulo(submission.disqualified_at)}
           </p>
         </CardShell>
       ))}

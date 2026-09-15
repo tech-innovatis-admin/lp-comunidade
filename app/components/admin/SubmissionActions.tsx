@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, AlertCircle } from 'lucide-react'
-import { EDITAL_EVALUATION_CRITERIA, EDITAL_APPROVAL_MIN_SCORE, validateEvaluationScores } from '@/lib/edital-evaluation'
+import {
+  EDITAL_EVALUATION_CRITERIA,
+  EDITAL_APPROVAL_MIN_SCORE,
+  validateEvaluationScores,
+} from '@/lib/edital-evaluation'
 
 interface EvaluationData {
   scores: Record<string, number>
@@ -24,12 +28,40 @@ interface SubmissionActionsProps {
   disqualification: DisqualificationData | null
 }
 
-function initialScores(evaluation: EvaluationData | null): Record<string, number> {
+function initialScoreInputs(evaluation: EvaluationData | null): Record<string, string> {
+  const inputs: Record<string, string> = {}
+  for (const criterion of EDITAL_EVALUATION_CRITERIA) {
+    inputs[criterion.code] = String(evaluation?.scores[criterion.code] ?? 0)
+  }
+  return inputs
+}
+
+function parseScoreInputs(inputs: Record<string, string>): Record<string, number> {
   const scores: Record<string, number> = {}
   for (const criterion of EDITAL_EVALUATION_CRITERIA) {
-    scores[criterion.code] = evaluation?.scores[criterion.code] ?? 0
+    const raw = inputs[criterion.code]?.trim() ?? ''
+    if (raw === '') {
+      scores[criterion.code] = 0
+      continue
+    }
+    const parsed = Number.parseInt(raw, 10)
+    scores[criterion.code] = Number.isFinite(parsed) ? parsed : 0
   }
   return scores
+}
+
+function sanitizeScoreInput(raw: string, maxPoints: number): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits === '') {
+    return ''
+  }
+
+  const parsed = Number.parseInt(digits, 10)
+  if (!Number.isFinite(parsed)) {
+    return ''
+  }
+
+  return String(Math.min(Math.max(parsed, 0), maxPoints))
 }
 
 export default function SubmissionActions({ submissionId, evaluation, disqualification }: SubmissionActionsProps) {
@@ -37,13 +69,13 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
   const [showEvaluationModal, setShowEvaluationModal] = useState(false)
   const [showDisqualifyModal, setShowDisqualifyModal] = useState(false)
   const [showRequalifyModal, setShowRequalifyModal] = useState(false)
-  const [scores, setScores] = useState<Record<string, number>>(() => initialScores(evaluation))
+  const [scoreInputs, setScoreInputs] = useState<Record<string, string>>(() => initialScoreInputs(evaluation))
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   const openEvaluationModal = () => {
-    setScores(initialScores(evaluation))
+    setScoreInputs(initialScoreInputs(evaluation))
     setError('')
     setShowEvaluationModal(true)
   }
@@ -59,6 +91,7 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
     setShowRequalifyModal(true)
   }
 
+  const scores = parseScoreInputs(scoreInputs)
   const validation = validateEvaluationScores(scores)
 
   const handleSaveEvaluation = async () => {
@@ -175,35 +208,70 @@ export default function SubmissionActions({ submissionId, evaluation, disqualifi
 
       {showEvaluationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto admin-modal-scroll">
-            <h2 className="text-lg font-bold text-white mb-6">Avaliação da proposta</h2>
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto admin-modal-scroll">
+            <h2 className="text-lg font-bold text-white mb-2">Avaliação da proposta</h2>
+            <p className="text-sm text-slate-400 mb-6">
+              Informe a nota de cada critério. O máximo por campo está indicado ao lado.
+            </p>
 
             <div className="space-y-4">
               {EDITAL_EVALUATION_CRITERIA.map((criterion) => (
-                <div key={criterion.code}>
-                  <label htmlFor={`score-${criterion.code}`} className="block text-sm text-slate-300 mb-1">
-                    {criterion.label} <span className="text-slate-500">(máx. {criterion.maxPoints})</span>
-                  </label>
-                  <input
-                    id={`score-${criterion.code}`}
-                    type="number"
-                    min={0}
-                    max={criterion.maxPoints}
-                    step={1}
-                    value={scores[criterion.code]}
-                    onChange={(e) => {
-                      const value = Number.parseInt(e.target.value, 10)
-                      setScores((prev) => ({ ...prev, [criterion.code]: Number.isFinite(value) ? value : 0 }))
-                    }}
-                    className="w-full px-4 py-2 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-[#22AE84]/30 focus:border-[#22AE84]"
-                  />
-                </div>
-              ))}
+                  <div
+                    key={criterion.code}
+                    className="rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <label htmlFor={`score-${criterion.code}`} className="text-sm text-slate-200 leading-snug">
+                        {criterion.label}
+                      </label>
+                      <span className="shrink-0 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-bold tracking-wide text-[#22AE84]">
+                        0–{criterion.maxPoints}
+                      </span>
+                    </div>
+                    <input
+                      id={`score-${criterion.code}`}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      value={scoreInputs[criterion.code] ?? ''}
+                      placeholder="0"
+                      onFocus={(e) => {
+                        if ((scoreInputs[criterion.code] ?? '') === '0') {
+                          setScoreInputs((prev) => ({ ...prev, [criterion.code]: '' }))
+                        }
+                        requestAnimationFrame(() => e.target.select())
+                      }}
+                      onChange={(e) => {
+                        const next = sanitizeScoreInput(e.target.value, criterion.maxPoints)
+                        setScoreInputs((prev) => ({ ...prev, [criterion.code]: next }))
+                        setError('')
+                      }}
+                      onBlur={() => {
+                        setScoreInputs((prev) => {
+                          const current = prev[criterion.code]?.trim() ?? ''
+                          if (current === '') {
+                            return { ...prev, [criterion.code]: '0' }
+                          }
+                          return prev
+                        })
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl text-white tabular-nums focus:outline-none focus:ring-2 focus:ring-[#22AE84]/30 focus:border-[#22AE84]"
+                    />
+                  </div>
+                ))}
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-slate-800 pt-4">
-              <span className="text-slate-300 font-medium">Nota final</span>
-              <span className={`text-2xl font-bold ${validation.total >= EDITAL_APPROVAL_MIN_SCORE ? 'text-[#22AE84]' : 'text-slate-200'}`}>
+              <div>
+                <p className="text-slate-300 font-medium">Nota final</p>
+                <p className="text-xs text-slate-500">Aprovação a partir de {EDITAL_APPROVAL_MIN_SCORE}</p>
+              </div>
+              <span
+                className={`text-2xl font-bold tabular-nums ${
+                  validation.total >= EDITAL_APPROVAL_MIN_SCORE ? 'text-[#22AE84]' : 'text-slate-200'
+                }`}
+              >
                 {validation.total} / 100
               </span>
             </div>

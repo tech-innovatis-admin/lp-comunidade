@@ -10,6 +10,7 @@ import {
   EDITAL_PHOTO_DOCUMENT_CODE,
   EDITAL_PHOTOS_PDF_DOCUMENT_CODE,
 } from '@/lib/edital-requirements'
+import { formatDateTimeSaoPaulo } from '@/lib/datetime-br'
 import { EDITAL_APPROVAL_MIN_SCORE } from '@/lib/edital-evaluation'
 import ThumbnailCard from '@/app/components/admin/ThumbnailCard'
 import SubmissionActions from '@/app/components/admin/SubmissionActions'
@@ -224,7 +225,7 @@ export default async function AdminEditalDetailPage({
             {submission.protocol_number && (
               <span className="text-slate-300">Protocolo {submission.protocol_number} · </span>
             )}
-            CPF {submission.cpf} · Enviada em {new Date(submission.submitted_at).toLocaleString('pt-BR')}
+            CPF {submission.cpf} · Enviada em {formatDateTimeSaoPaulo(submission.submitted_at)}
           </p>
 
           {evaluation && (
@@ -239,7 +240,7 @@ export default async function AdminEditalDetailPage({
                 Nota: {evaluation.total} / 100
               </span>
               <span className="text-slate-500 ml-2">
-                avaliado por {evaluation.evaluatedBy} em {new Date(evaluation.evaluatedAt).toLocaleString('pt-BR')}
+                avaliado por {evaluation.evaluatedBy} em {formatDateTimeSaoPaulo(evaluation.evaluatedAt)}
               </span>
             </p>
           )}
@@ -249,7 +250,8 @@ export default async function AdminEditalDetailPage({
               <p className="text-red-300 font-bold text-sm">Proposta desqualificada</p>
               <p className="text-red-300/80 text-sm mt-1">{disqualification.reason}</p>
               <p className="text-red-300/60 text-xs mt-1">
-                por {disqualification.disqualifiedBy} em {new Date(disqualification.disqualifiedAt).toLocaleString('pt-BR')}
+                por {disqualification.disqualifiedBy} em{' '}
+                {formatDateTimeSaoPaulo(disqualification.disqualifiedAt)}
               </p>
             </div>
           )}
