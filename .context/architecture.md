@@ -36,9 +36,12 @@ O lockfile define versoes instaladas; CI e Docker usam Node 20.
 
 `/` renderiza `HeroSection`, `EditalAnnouncementSection`,
 `InnovaNationSection`, depoimentos e cadastro. A secao do Edital PPI 2026
-aponta `Inscreva-se` para `/edital` e abre o edital principal por link/download
-em `/edital/edital-ppi-2026.pdf`; esse PDF ainda precisa ser fornecido para
-aceite final.
+aparece apos o gate de divulgacao; o CTA `Inscreva-se` e as rotas `/edital` e
+`/edital/proposta` so liberam o fluxo a partir de `2026-09-17T00:00:00-03:00`
+(override `NEXT_PUBLIC_EDITAL_REGISTRATION_OPENS_AT`, helper
+`lib/edital-registration-window.ts`). Antes disso o botao fica escuro e as
+rotas exibem tela de aguardo. `Edital do Programa` abre o modal e o PDF em
+`/edital/edital-ppi-2026.pdf`.
 
 `/inscricao/formulario` usa `RegistrationFormSection.tsx`.
 `/inscricao` apresenta o comunicado de pre-cadastro.

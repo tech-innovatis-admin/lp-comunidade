@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import EditalPropostaWizard from '../../components/edital/EditalPropostaWizard'
+import EditalRegistrationClosed from '../../components/EditalRegistrationClosed'
+import { isEditalRegistrationOpen } from '@/lib/edital-registration-window'
 
 export const metadata: Metadata = {
   title: 'Proposta ao Edital PPI | InnovaNation',
@@ -7,6 +9,10 @@ export const metadata: Metadata = {
 }
 
 export default function EditalPropostaPage() {
+  if (!isEditalRegistrationOpen()) {
+    return <EditalRegistrationClosed />
+  }
+
   return (
     <main className="flex-1 relative z-10 min-h-screen flex items-center justify-center px-4 py-16">
       <div className="w-full max-w-3xl">

@@ -3,7 +3,11 @@
 import Link from 'next/link'
 import type { MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, CalendarDays, Download, ExternalLink, FileText, X } from 'lucide-react'
+import { ArrowRight, CalendarDays, Download, ExternalLink, FileText, Lock, X } from 'lucide-react'
+import {
+  isEditalRegistrationOpen,
+  resolveEditalRegistrationOpensAt,
+} from '@/lib/edital-registration-window'
 
 const EDITAL_PDF_URL = '/edital/edital-ppi-2026.pdf'
 const EDITAL_TITLE = 'Edital PPI 2026'
@@ -13,14 +17,18 @@ const EDITAL_PERIOD = 'Inscrições: 17/09 a 04/10/2026'
 /** Divulgação na home só após este instante (America/Sao_Paulo). Override: NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT */
 const DEFAULT_AVAILABLE_AT = '2026-09-15T06:00:00-03:00'
 
+function resolveTimestamp(raw: string | undefined, fallback: string): number {
+  const parsed = Date.parse(raw ?? fallback)
+  return Number.isFinite(parsed) ? parsed : Date.parse(fallback)
+}
+
 function resolveAvailableAt(): number {
-  const raw = process.env.NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT ?? DEFAULT_AVAILABLE_AT
-  const parsed = Date.parse(raw)
-  return Number.isFinite(parsed) ? parsed : Date.parse(DEFAULT_AVAILABLE_AT)
+  return resolveTimestamp(process.env.NEXT_PUBLIC_EDITAL_ANNOUNCEMENT_AVAILABLE_AT, DEFAULT_AVAILABLE_AT)
 }
 
 export default function EditalAnnouncementSection() {
   const [isVisible, setIsVisible] = useState(false)
+  const [registrationOpen, setRegistrationOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const triggerButtonRef = useRef<HTMLButtonElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -42,6 +50,29 @@ export default function EditalAnnouncementSection() {
     const remainingMs = Math.max(availableAt - Date.now(), 0)
     const timer = window.setTimeout(() => {
       setIsVisible(true)
+    }, remainingMs)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    const opensAt = resolveEditalRegistrationOpensAt()
+    const markIfReady = () => {
+      if (isEditalRegistrationOpen()) {
+        setRegistrationOpen(true)
+        return true
+      }
+      setRegistrationOpen(false)
+      return false
+    }
+
+    if (markIfReady()) {
+      return
+    }
+
+    const remainingMs = Math.max(opensAt - Date.now(), 0)
+    const timer = window.setTimeout(() => {
+      setRegistrationOpen(true)
     }, remainingMs)
 
     return () => window.clearTimeout(timer)
@@ -133,13 +164,31 @@ export default function EditalAnnouncementSection() {
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </button>
 
-              <Link
-                href="/edital"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#EA5B0C] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-950/20 transition duration-300 hover:bg-[#D94F0A] hover:shadow-orange-900/30 focus:outline-none focus:ring-2 focus:ring-[#EA5B0C] focus:ring-offset-2"
-              >
-                Inscreva-se
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+              {registrationOpen ? (
+                <Link
+                  href="/edital"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#EA5B0C] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-950/20 transition duration-300 hover:bg-[#D94F0A] hover:shadow-orange-900/30 focus:outline-none focus:ring-2 focus:ring-[#EA5B0C] focus:ring-offset-2"
+                >
+                  Inscreva-se
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              ) : (
+                <div className="w-full space-y-2">
+                  <button
+                    type="button"
+                    disabled
+                    aria-disabled="true"
+                    title="Inscrições liberadas a partir de 17/09/2026 à 00:00 (horário de Brasília)"
+                    className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-slate-800 px-6 py-3 text-sm font-bold text-slate-400 shadow-inner"
+                  >
+                    <Lock className="h-4 w-4" aria-hidden="true" />
+                    Inscreva-se
+                  </button>
+                  <p className="text-center text-xs font-medium text-slate-500">
+                    Liberação em 17/09/2026 às 00:00 (Brasília)
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

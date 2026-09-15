@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import EditalCpfGate from '../components/EditalCpfGate'
+import EditalRegistrationClosed from '../components/EditalRegistrationClosed'
+import { isEditalRegistrationOpen } from '@/lib/edital-registration-window'
 
 export const metadata: Metadata = {
   title: 'Edital N.º 01/2026 – PPI | InnovaNation',
@@ -11,6 +13,10 @@ export default async function EditalPage({
 }: {
   searchParams: Promise<{ expired?: string }>
 }) {
+  if (!isEditalRegistrationOpen()) {
+    return <EditalRegistrationClosed />
+  }
+
   const params = await searchParams
   const sessionExpired = params.expired === '1'
 
