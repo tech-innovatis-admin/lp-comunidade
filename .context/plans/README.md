@@ -5,6 +5,7 @@ Use o [modelo](TEMPLATE.md) e atualize este indice na mesma alteracao.
 
 ## Atual
 
+- [Upload documental ampliado e painel admin](2026-09-15-edital-upload-admin-preview.md).
 - [Edital PPI: documentos, exclusao e divulgacao](2026-09-11-edital-documentos-divulgacao.md).
 - [Contexto para desenvolvimento com IA](2026-09-11-contexto-ia.md).
 

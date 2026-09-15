@@ -10,6 +10,7 @@ import TelaFotos from './TelaFotos'
 import TelaProposta from './TelaProposta'
 import TelaDeclaracoes from './TelaDeclaracoes'
 import TelaRevisao from './TelaRevisao'
+import { EditalUploadBusyProvider, useEditalUploadBusy } from './EditalUploadBusyContext'
 import { getEditalSession, clearEditalSession, EditalSessionPrefill } from '@/lib/edital-session'
 import {
   EditalSubmissionDocument,
@@ -88,7 +89,16 @@ function buildStepPayload(step: EditalDraftStep, data: EditalWizardData): Record
 }
 
 export default function EditalPropostaWizard() {
+  return (
+    <EditalUploadBusyProvider>
+      <EditalPropostaWizardInner />
+    </EditalUploadBusyProvider>
+  )
+}
+
+function EditalPropostaWizardInner() {
   const router = useRouter()
+  const { busy: uploadBusy } = useEditalUploadBusy()
   const [token, setToken] = useState<string | null>(null)
   const [prefill, setPrefill] = useState<EditalSessionPrefill | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'submitted' | 'error'>('loading')
@@ -191,6 +201,10 @@ export default function EditalPropostaWizard() {
   }, [currentStep, token, data, handleTokenExpired])
 
   const goToStep = (step: string) => {
+    if (uploadBusy) {
+      return
+    }
+
     const targetIndex = STEPS.findIndex((item) => item.key === step)
     const fromIndex = STEPS.findIndex((item) => item.key === currentStep)
     const movingForward = targetIndex > fromIndex
@@ -379,7 +393,8 @@ export default function EditalPropostaWizard() {
             <button
               type="button"
               onClick={() => goToStep(STEPS[currentIndex - 1].key)}
-              className="flex items-center gap-1 px-4 py-3 border border-slate-700/50 text-slate-200 rounded-2xl font-bold hover:border-[#22AE84] transition-all"
+              disabled={uploadBusy}
+              className="flex items-center gap-1 px-4 py-3 border border-slate-700/50 text-slate-200 rounded-2xl font-bold hover:border-[#22AE84] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
               Voltar
@@ -388,7 +403,8 @@ export default function EditalPropostaWizard() {
           <button
             type="button"
             onClick={handleSaveAndContinueLater}
-            className="flex items-center gap-1 px-4 py-3 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+            disabled={uploadBusy}
+            className="flex items-center gap-1 px-4 py-3 text-sm text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-4 h-4" />
             {showSavedConfirmation ? 'Salvo!' : 'Salvar e continuar depois'}
@@ -399,9 +415,10 @@ export default function EditalPropostaWizard() {
           <button
             type="button"
             onClick={() => goToStep(STEPS[currentIndex + 1].key)}
-            className="flex items-center gap-1 px-6 py-3 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all"
+            disabled={uploadBusy || instituicaoCnpjBlocked}
+            className="flex items-center gap-1 px-6 py-3 bg-[#22AE84] hover:bg-[#1C8C6A] text-white rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Avançar
+            {uploadBusy ? 'Enviando arquivo...' : 'Avançar'}
             <ChevronRight className="w-4 h-4" />
           </button>
         )}

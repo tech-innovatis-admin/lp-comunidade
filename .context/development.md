@@ -17,6 +17,10 @@ no ambiente local, nunca no contexto ou em commits.
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET_NAME` | S3; conferir credenciais do ambiente AWS no helper |
 | `GOOGLE_CREDENTIALS_S3_*`, `GOOGLE_SHEET_ID`, `GOOGLE_SHEET_NAME` | Sheets; alternativas em `google-sheets.ts` |
 | `WEBHOOK_N8N_URL`, `WEBHOOK_N8N_EDITAL_URL` | Eventos da comunidade/Edital |
+
+No workflow N8N do Edital, e-mails devem usar `protocolNumber` (ex.: `20260001`),
+nao o campo `id` (ID interno da URL admin). O app ja envia ambos no webhook;
+workflows antigos com `#{{ $json.id }}` divergem do painel de avaliacao.
 | `PUBLIC_BASE_URL`, `APP_URL`, `APP_ORIGIN` | URL publica/retorno conforme consumidor |
 | `EDITAL_TOKEN_SECRET`, `ADMIN_TOKEN_SECRET` | Sessoes separadas |
 | `AUTH_MODE`, `COGNITO_*` | Modo de auth e Cognito |

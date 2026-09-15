@@ -78,10 +78,13 @@ Edital usam DTOs allowlisted; rotas nao devem expor CPF completo,
 `registrationId`, S3 key, hashes, IP, user-agent, tokens ou linhas brutas do
 banco ao cliente.
 
-Atualmente: documentos do usuario aceitam PDF, DOC e DOCX com validacao de MIME,
-extensao e assinatura binaria, limite de 10 MiB; fotos continuam JPEG, PNG e WEBP,
-com 5 MiB por foto e quantidade de 3 a 8. Codigos `8.1.8` (fotos) e `8.1.10`
-(termo) sao gerados automaticamente. Confira constantes ao editar.
+Atualmente: documentos do usuario aceitam PDF, DOC, DOCX, JPEG, PNG e WEBP com
+validacao de MIME, extensao e assinatura binaria, limite de 10 MiB; fotos
+continuam JPEG, PNG e WEBP, com 5 MiB por foto e quantidade de 3 a 8. O wizard
+usa `EditalUploadBusyContext` para impedir uploads concorrentes e comprime
+imagens no cliente antes do POST (`lib/edital-image-compress.ts`). Codigos
+`8.1.8` (fotos) e `8.1.10` (termo) sao gerados automaticamente. Confira
+constantes ao editar.
 
 IDs `BIGINT` vindos do PostgreSQL sao normalizados na fronteira do banco com
 `parseDatabaseId` antes de comparacao de propriedade ou envio em DTO. Exclusao de

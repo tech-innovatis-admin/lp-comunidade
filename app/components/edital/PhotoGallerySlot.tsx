@@ -14,6 +14,8 @@ import {
   EDITAL_MAX_PHOTO_COUNT,
   EDITAL_MIN_PHOTO_COUNT,
 } from '@/lib/edital-requirements'
+import { compressImageForUpload } from '@/lib/edital-image-compress'
+import { useEditalUploadBusy } from './EditalUploadBusyContext'
 
 interface PhotoGallerySlotProps {
   token: string
@@ -40,6 +42,9 @@ export default function PhotoGallerySlot({
   const [removingId, setRemovingId] = useState<number | null>(null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const { busy, begin, end } = useEditalUploadBusy()
+  const lockedByOther = busy && !uploading && removingId === null
+  const disabled = uploading || removingId !== null || lockedByOther
 
   const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -68,15 +73,21 @@ export default function PhotoGallerySlot({
     }
 
     setUploading(true)
+    begin()
     try {
       for (const file of files) {
-        const result = await uploadEditalDocument(token, EDITAL_PHOTO_DOCUMENT_CODE, file)
+        const prepared = await compressImageForUpload(file)
+        if (prepared.size > EDITAL_MAX_PHOTO_BYTES) {
+          setError(`Cada foto deve ter no máximo ${formatFileSize(EDITAL_MAX_PHOTO_BYTES)}`)
+          break
+        }
+        const result = await uploadEditalDocument(token, EDITAL_PHOTO_DOCUMENT_CODE, prepared)
         onUploaded({
           id: result.documentId,
           requirementCode: result.requirementCode,
           originalFilename: result.filename,
-          mimeType: file.type,
-          sizeBytes: file.size,
+          mimeType: result.mimeType ?? prepared.type,
+          sizeBytes: prepared.size,
           uploadedAt: new Date().toISOString(),
         })
       }
@@ -88,12 +99,14 @@ export default function PhotoGallerySlot({
       setError(err instanceof Error ? err.message : 'Erro ao enviar foto')
     } finally {
       setUploading(false)
+      end()
       if (inputRef.current) inputRef.current.value = ''
     }
   }
 
   const handleRemove = async (documentId: number) => {
     setRemovingId(documentId)
+    begin()
     setError('')
     try {
       await deleteEditalDocument(token, documentId)
@@ -106,6 +119,7 @@ export default function PhotoGallerySlot({
       setError(err instanceof Error ? err.message : 'Erro ao remover foto')
     } finally {
       setRemovingId(null)
+      end()
     }
   }
 
@@ -128,17 +142,26 @@ export default function PhotoGallerySlot({
             accept="image/jpeg,image/png,image/webp"
             multiple
             onChange={handleFilesChange}
-            disabled={uploading}
+            disabled={disabled}
             className="hidden"
             id="upload-foto"
           />
           <label
-            htmlFor="upload-foto"
-            className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-slate-700/50 rounded-2xl cursor-pointer hover:border-[#22AE84] transition-colors text-slate-300"
+            htmlFor={disabled ? undefined : 'upload-foto'}
+            aria-disabled={disabled}
+            className={`flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed rounded-2xl transition-colors text-slate-300 ${
+              disabled
+                ? 'border-slate-800 cursor-not-allowed opacity-60'
+                : 'border-slate-700/50 cursor-pointer hover:border-[#22AE84]'
+            }`}
           >
             {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
             <span className="text-sm font-medium">
-              {uploading ? 'Enviando...' : 'Clique para selecionar as fotos'}
+              {uploading
+                ? 'Enviando...'
+                : lockedByOther
+                  ? 'Aguarde o envio em andamento...'
+                  : 'Clique para selecionar as fotos'}
             </span>
           </label>
         </div>
@@ -153,7 +176,7 @@ export default function PhotoGallerySlot({
               <button
                 type="button"
                 onClick={() => handleRemove(photo.id)}
-                disabled={removingId === photo.id}
+                disabled={disabled || removingId === photo.id}
                 className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500 rounded-lg transition-colors disabled:opacity-50"
                 aria-label="Remover foto"
               >

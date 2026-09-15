@@ -5,7 +5,7 @@ import DocumentUploadSlot from './DocumentUploadSlot'
 import { EditalSubmissionDocument } from '@/lib/edital-proposta-api'
 import { EditalSessionPrefill } from '@/lib/edital-session'
 import { EDITAL_MAX_TEXT_LENGTH, EDITAL_MAX_DOCUMENT_BYTES } from '@/lib/edital-requirements'
-import { EDITAL_DOCUMENT_ACCEPT } from '@/lib/edital-document-types'
+import { EDITAL_DOCUMENT_ACCEPT, EDITAL_DOCUMENT_HELPER_TEXT } from '@/lib/edital-document-types'
 
 interface TelaEquipeProps {
   prefill: EditalSessionPrefill
@@ -21,8 +21,6 @@ interface TelaEquipeProps {
 function findDocument(documents: EditalSubmissionDocument[], code: string): EditalSubmissionDocument | null {
   return documents.find((doc) => doc.requirementCode === code) ?? null
 }
-
-const DOCUMENT_HELPER_TEXT = 'Formatos aceitos: PDF, DOC e DOCX (até 10 MB)'
 
 export default function TelaEquipe({
   prefill,
@@ -106,7 +104,7 @@ export default function TelaEquipe({
           token={token}
           requirementCode="8.1.1"
           label="Documento oficial de identificação com foto"
-          helperText={`RG, CNH (com foto) ou equivalente. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`RG, CNH (com foto) ou equivalente. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.1')}
@@ -118,7 +116,7 @@ export default function TelaEquipe({
           token={token}
           requirementCode="8.1.2"
           label="CPF do responsável pela submissão"
-          helperText={DOCUMENT_HELPER_TEXT}
+          helperText={EDITAL_DOCUMENT_HELPER_TEXT}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.2')}
@@ -130,7 +128,7 @@ export default function TelaEquipe({
           token={token}
           requirementCode="8.1.3"
           label="Comprovante de vínculo institucional"
-          helperText={`Declaração institucional, portaria, contrato ou documento equivalente. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Declaração institucional, portaria, contrato ou documento equivalente. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.3')}
@@ -142,7 +140,7 @@ export default function TelaEquipe({
           token={token}
           requirementCode="8.1.4"
           label="Currículo atualizado"
-          helperText={`Preferencialmente extraído da Plataforma Lattes. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Preferencialmente extraído da Plataforma Lattes. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.4')}

@@ -11,6 +11,8 @@ const DOC_BUFFER = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 
 const DOCX_BUFFER = Buffer.from('PK\x03\x04[Content_Types].xml word/document.xml');
 const ZIP_BUFFER = Buffer.from('PK\x03\x04unrelated/file.txt');
 const PNG_BUFFER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const JPEG_BUFFER = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+const WEBP_BUFFER = Buffer.from('RIFF\x00\x00\x00\x00WEBPVP8 ');
 
 test('aceita PDF quando extensao, MIME e assinatura conferem', () => {
   const result = validateEditalDocumentBuffer('proposta.pdf', 'application/pdf', PDF_BUFFER);
@@ -51,26 +53,50 @@ test('aceita DOCX OOXML e normaliza MIME zip', () => {
   );
 });
 
+test('aceita JPEG, PNG e WEBP com assinatura valida', () => {
+  assert.deepEqual(validateEditalDocumentBuffer('scan.jpg', 'image/jpeg', JPEG_BUFFER), {
+    valid: true,
+    kind: 'jpeg',
+    mimeType: 'image/jpeg',
+  });
+  assert.deepEqual(validateEditalDocumentBuffer('scan.png', 'image/png', PNG_BUFFER), {
+    valid: true,
+    kind: 'png',
+    mimeType: 'image/png',
+  });
+  assert.deepEqual(validateEditalDocumentBuffer('scan.webp', 'image/webp', WEBP_BUFFER), {
+    valid: true,
+    kind: 'webp',
+    mimeType: 'image/webp',
+  });
+  assert.equal(getEditalDocumentKindFromMime('image/png'), 'png');
+});
+
 test('rejeita ZIP comum renomeado para DOCX', () => {
   const result = validateEditalDocumentBuffer('arquivo.docx', 'application/zip', ZIP_BUFFER);
 
   assert.equal(result.valid, false);
-  assert.match(result.error, /PDF, DOC e DOCX/);
+  assert.match(result.error, /PDF, DOC, DOCX, JPG, PNG ou WEBP/);
 });
 
 test('rejeita extensao, MIME e assinatura incoerentes', () => {
   const result = validateEditalDocumentBuffer('arquivo.pdf', 'application/msword', DOC_BUFFER);
 
   assert.equal(result.valid, false);
-  assert.match(result.error, /PDF, DOC e DOCX/);
+  assert.match(result.error, /PDF, DOC, DOCX, JPG, PNG ou WEBP/);
   assert.equal(getEditalDocumentKind('arquivo.pdf', 'application/msword'), null);
 });
 
-test('nao trata imagem como documento geral', () => {
-  const result = validateEditalDocumentBuffer('foto.png', 'image/png', PNG_BUFFER);
+test('rejeita imagem com assinatura inconsistente', () => {
+  const result = validateEditalDocumentBuffer('foto.png', 'image/png', JPEG_BUFFER);
 
   assert.equal(result.valid, false);
-  assert.match(result.error, /PDF, DOC e DOCX/);
-  assert.equal(getEditalDocumentKind('foto.png', 'image/png'), null);
-  assert.equal(getEditalDocumentKindFromMime('image/png'), null);
+  assert.match(result.error, /PDF, DOC, DOCX, JPG, PNG ou WEBP/);
+});
+
+test('rejeita executavel e outros tipos perigosos', () => {
+  const result = validateEditalDocumentBuffer('malware.exe', 'application/octet-stream', Buffer.from('MZ'));
+
+  assert.equal(result.valid, false);
+  assert.equal(getEditalDocumentKind('malware.exe', 'application/octet-stream'), null);
 });

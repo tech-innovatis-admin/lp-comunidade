@@ -57,7 +57,8 @@ Mesmo webhook → 2 nodes de e-mail (usuário + admins). Botão admin aponta par
 
 | Campo | Descrição |
 |-------|-----------|
-| `id` | ID da proposta (usar como protocolo nos e-mails) |
+| `id` | ID interno da proposta (só para URL admin `/admin/editais/{id}`) |
+| `protocolNumber` | Protocolo de negócio `YYYY` + sequencial (ex.: `20260001`) — **usar nos e-mails** |
 | `registrationId` | ID da inscrição |
 | `status` | `"SUBMITTED"` |
 | `fullName` | Nome do proponente |
@@ -80,7 +81,10 @@ Mesmo webhook → 2 nodes de e-mail (usuário + admins). Botão admin aponta par
 | `adminReviewUrl` | `${PUBLIC_BASE_URL}/admin/editais/{id}` |
 | `source` | `"edital-proposta"` |
 
-Não existe campo `protocolNumber`; o protocolo exibido nos e-mails é `id`.
+**Importante (2026-08-04+):** o app envia `protocolNumber`. E-mails e planilhas devem
+exibir `{{ $json.protocolNumber }}`, não `{{ $json.id }}`. O `id` continua só para
+deep link do painel. Workflows antigos que usam `#{{ $json.id }}` mostram número
+diferente do admin (causa raiz de divergência protocolo e-mail vs avaliação).
 
 **Pré-requisito:** `PUBLIC_BASE_URL` deve ser a URL pública de produção para que `adminReviewUrl` não aponte para `localhost`.
 
@@ -89,15 +93,15 @@ Script de reenvio manual: `scripts/resend-edital-webhook.js` (mesmo payload).
 ### Email 1 — proponente
 
 - **To:** `{{ $json.email }}`
-- **Assunto (sugestão):** `Proposta recebida — Edital PPI (protocolo #{{ $json.id }})`
-- **Corpo:** confirmação curta de que a proposta foi recebida; incluir protocolo `#{{ $json.id }}` e data `{{ $json.submittedAt }}` se disponível.
+- **Assunto (sugestão):** `Proposta recebida — Edital PPI (protocolo {{ $json.protocolNumber }})`
+- **Corpo:** confirmação curta de que a proposta foi recebida; incluir protocolo `{{ $json.protocolNumber }}` e data `{{ $json.submittedAt }}` se disponível.
 
 ### Email 2 — admins
 
 - **To:** lista fixa de e-mails admin (configurar no N8N; não vem do app)
-- **Assunto (sugestão):** `Nova proposta Edital PPI — #{{ $json.id }} — {{ $json.fullName }}`
+- **Assunto (sugestão):** `Nova proposta Edital PPI — {{ $json.protocolNumber }} — {{ $json.fullName }}`
 - **Corpo (mínimo):**
-  - Protocolo: `#{{ $json.id }}`
+  - Protocolo: `{{ $json.protocolNumber }}`
   - Nome: `{{ $json.fullName }}`
   - E-mail: `{{ $json.email }}`
   - Laboratório: `{{ $json.labName }}`

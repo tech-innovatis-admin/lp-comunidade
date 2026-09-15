@@ -9,6 +9,8 @@ import {
   deleteEditalDocument,
   getEditalDocumentUrl,
 } from '@/lib/edital-proposta-api'
+import { compressImageForUpload } from '@/lib/edital-image-compress'
+import { useEditalUploadBusy } from './EditalUploadBusyContext'
 
 interface DocumentUploadSlotProps {
   token: string
@@ -29,6 +31,16 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
+function isInlinePreviewMime(mimeType: string | undefined): boolean {
+  const normalized = mimeType?.toLowerCase() ?? ''
+  return (
+    normalized === 'application/pdf' ||
+    normalized === 'image/jpeg' ||
+    normalized === 'image/png' ||
+    normalized === 'image/webp'
+  )
+}
+
 export default function DocumentUploadSlot({
   token,
   requirementCode,
@@ -45,9 +57,12 @@ export default function DocumentUploadSlot({
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const isPdfDocument = document?.mimeType.toLowerCase() === 'application/pdf'
-  const fileActionLabel = isPdfDocument ? 'Ver arquivo' : 'Baixar arquivo'
-  const FileActionIcon = isPdfDocument ? Eye : Download
+  const { busy, begin, end } = useEditalUploadBusy()
+  const lockedByOther = busy && !uploading && !removing
+  const disabled = uploading || removing || lockedByOther
+  const canPreviewInline = isInlinePreviewMime(document?.mimeType)
+  const fileActionLabel = canPreviewInline ? 'Ver arquivo' : 'Baixar arquivo'
+  const FileActionIcon = canPreviewInline ? Eye : Download
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -62,14 +77,21 @@ export default function DocumentUploadSlot({
     }
 
     setUploading(true)
+    begin()
     try {
-      const result = await uploadEditalDocument(token, requirementCode, file)
+      const prepared = await compressImageForUpload(file)
+      if (prepared.size > maxBytes) {
+        setError(`Arquivo acima do limite de ${formatFileSize(maxBytes)}`)
+        return
+      }
+
+      const result = await uploadEditalDocument(token, requirementCode, prepared)
       onUploaded({
         id: result.documentId,
         requirementCode: result.requirementCode,
         originalFilename: result.filename,
-        mimeType: result.mimeType ?? file.type,
-        sizeBytes: file.size,
+        mimeType: result.mimeType ?? prepared.type,
+        sizeBytes: prepared.size,
         uploadedAt: result.uploadedAt ?? new Date().toISOString(),
       })
     } catch (err) {
@@ -80,6 +102,7 @@ export default function DocumentUploadSlot({
       setError(err instanceof Error ? err.message : 'Erro ao enviar arquivo')
     } finally {
       setUploading(false)
+      end()
       if (inputRef.current) inputRef.current.value = ''
     }
   }
@@ -87,6 +110,7 @@ export default function DocumentUploadSlot({
   const handleRemove = async () => {
     if (!document) return
     setRemoving(true)
+    begin()
     setError('')
     try {
       await deleteEditalDocument(token, document.id)
@@ -99,6 +123,7 @@ export default function DocumentUploadSlot({
       setError(err instanceof Error ? err.message : 'Erro ao remover arquivo')
     } finally {
       setRemoving(false)
+      end()
     }
   }
 
@@ -128,13 +153,18 @@ export default function DocumentUploadSlot({
             type="file"
             accept={accept}
             onChange={handleFileChange}
-            disabled={uploading}
+            disabled={disabled}
             className="hidden"
             id={`upload-${requirementCode}`}
           />
           <label
-            htmlFor={`upload-${requirementCode}`}
-            className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-slate-700/50 rounded-2xl cursor-pointer hover:border-[#22AE84] transition-colors text-slate-300"
+            htmlFor={disabled ? undefined : `upload-${requirementCode}`}
+            aria-disabled={disabled}
+            className={`flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed rounded-2xl transition-colors text-slate-300 ${
+              disabled
+                ? 'border-slate-800 cursor-not-allowed opacity-60'
+                : 'border-slate-700/50 cursor-pointer hover:border-[#22AE84]'
+            }`}
           >
             {uploading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -142,7 +172,11 @@ export default function DocumentUploadSlot({
               <Upload className="w-5 h-5" />
             )}
             <span className="text-sm font-medium">
-              {uploading ? 'Enviando...' : 'Clique para selecionar o arquivo'}
+              {uploading
+                ? 'Enviando...'
+                : lockedByOther
+                  ? 'Aguarde o envio em andamento...'
+                  : 'Clique para selecionar o arquivo'}
             </span>
           </label>
         </div>
@@ -163,7 +197,8 @@ export default function DocumentUploadSlot({
             <button
               type="button"
               onClick={handleView}
-              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              disabled={busy}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
               aria-label={fileActionLabel}
               title={fileActionLabel}
             >
@@ -172,7 +207,7 @@ export default function DocumentUploadSlot({
             <button
               type="button"
               onClick={handleRemove}
-              disabled={removing}
+              disabled={disabled}
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
               aria-label="Remover arquivo"
             >

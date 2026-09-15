@@ -29,11 +29,12 @@ test('mantem PDF e imagem inline e permite thumbnail', () => {
     documentKind: 'pdf',
   });
   assert.deepEqual(getDocumentAccessDisposition('image/webp', 'foto.webp'), {
-    documentKind: null,
+    documentKind: 'webp',
   });
 
   assert.equal(isThumbnailMimeTypeSupported('application/pdf'), true);
   assert.equal(isThumbnailMimeTypeSupported('image/jpeg'), true);
+  assert.equal(isThumbnailMimeTypeSupported('image/webp'), true);
 });
 
 test('bloqueia thumbnail de Word e MIME desconhecido', () => {

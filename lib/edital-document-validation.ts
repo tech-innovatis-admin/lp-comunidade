@@ -16,12 +16,17 @@ type InvalidEditalDocument = {
 
 export type EditalDocumentValidationResult = ValidEditalDocument | InvalidEditalDocument;
 
-const INVALID_DOCUMENT_ERROR = 'Formato de documento inválido. Envie um arquivo PDF, DOC e DOCX válido.';
+const INVALID_DOCUMENT_ERROR =
+  'Formato de documento inválido. Envie PDF, DOC, DOCX, JPG, PNG ou WEBP válido.';
 const OOXML_CONTENT_TYPES_MARKER = Buffer.from('[Content_Types].xml');
 const OOXML_WORD_DOCUMENT_MARKER = Buffer.from('word/document.xml');
 const OLE_SIGNATURE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
 const PDF_SIGNATURE = Buffer.from('%PDF-');
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const WEBP_RIFF = Buffer.from('RIFF');
+const WEBP_WEBP = Buffer.from('WEBP');
 
 const ACCEPTED_REPORTED_MIME_TYPES: Record<EditalDocumentKind, Set<string>> = {
   pdf: new Set(['application/pdf']),
@@ -31,6 +36,9 @@ const ACCEPTED_REPORTED_MIME_TYPES: Record<EditalDocumentKind, Set<string>> = {
     'application/zip',
     'application/octet-stream',
   ]),
+  jpeg: new Set(['image/jpeg', 'image/jpg', 'application/octet-stream']),
+  png: new Set(['image/png', 'application/octet-stream']),
+  webp: new Set(['image/webp', 'application/octet-stream']),
 };
 
 function normalizeMimeType(mimeType: string): string {
@@ -50,6 +58,18 @@ function getKindFromExtension(filename: string): EditalDocumentKind | null {
 
   if (normalizedFilename.endsWith('.doc')) {
     return 'doc';
+  }
+
+  if (normalizedFilename.endsWith('.jpg') || normalizedFilename.endsWith('.jpeg')) {
+    return 'jpeg';
+  }
+
+  if (normalizedFilename.endsWith('.png')) {
+    return 'png';
+  }
+
+  if (normalizedFilename.endsWith('.webp')) {
+    return 'webp';
   }
 
   return null;
@@ -79,6 +99,22 @@ function hasDocxSignature(buffer: Buffer): boolean {
   );
 }
 
+function hasJpegSignature(buffer: Buffer): boolean {
+  return hasPrefix(buffer, JPEG_SIGNATURE);
+}
+
+function hasPngSignature(buffer: Buffer): boolean {
+  return hasPrefix(buffer, PNG_SIGNATURE);
+}
+
+function hasWebpSignature(buffer: Buffer): boolean {
+  return (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).equals(WEBP_RIFF) &&
+    buffer.subarray(8, 12).equals(WEBP_WEBP)
+  );
+}
+
 function signatureMatchesKind(kind: EditalDocumentKind, buffer: Buffer): boolean {
   if (kind === 'pdf') {
     return hasPdfSignature(buffer);
@@ -88,7 +124,19 @@ function signatureMatchesKind(kind: EditalDocumentKind, buffer: Buffer): boolean
     return hasOleSignature(buffer);
   }
 
-  return hasDocxSignature(buffer);
+  if (kind === 'docx') {
+    return hasDocxSignature(buffer);
+  }
+
+  if (kind === 'jpeg') {
+    return hasJpegSignature(buffer);
+  }
+
+  if (kind === 'png') {
+    return hasPngSignature(buffer);
+  }
+
+  return hasWebpSignature(buffer);
 }
 
 export function getEditalDocumentKindFromMime(mimeType: string): EditalDocumentKind | null {

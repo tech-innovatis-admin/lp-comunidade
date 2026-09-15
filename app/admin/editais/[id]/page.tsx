@@ -95,8 +95,8 @@ function Block({
   children: React.ReactNode
 }) {
   return (
-    <section className="bg-slate-900/30 border border-slate-800 rounded-3xl p-6 sm:p-8">
-      <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+    <section className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 sm:p-8">
+      <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2 pb-3 border-b border-slate-800">
         <span className="text-[#22AE84]">{icon}</span>
         {title}
       </h2>
@@ -107,9 +107,9 @@ function Block({
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
-      <dt className="text-sm text-slate-400">{label}</dt>
-      <dd className="text-slate-200 whitespace-pre-wrap">{value}</dd>
+    <div className="rounded-2xl bg-slate-950/40 border border-slate-800/80 px-4 py-3">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">{label}</dt>
+      <dd className="text-slate-100 whitespace-pre-wrap leading-relaxed">{value}</dd>
     </div>
   )
 }
@@ -122,18 +122,18 @@ function DocumentGrid({
   documentsByCode: Map<string, DocumentRow[]>
 }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
       {codes.map((code) => {
         const doc = (documentsByCode.get(code) || [])[0]
-        const label = EDITAL_DOCUMENT_LABELS[code]
+        const requirementLabel = EDITAL_DOCUMENT_LABELS[code]
 
         if (!doc) {
           return (
-            <div
-              key={code}
-              className="aspect-[3/4] rounded-xl border border-dashed border-slate-700/50 flex items-center justify-center p-3"
-            >
-              <span className="text-xs text-slate-500 text-center">Não enviado</span>
+            <div key={code} className="space-y-2">
+              <div className="aspect-[3/4] rounded-2xl border border-dashed border-slate-700/50 flex items-center justify-center p-3 bg-slate-950/30">
+                <span className="text-xs text-slate-500 text-center">Não enviado</span>
+              </div>
+              <p className="text-xs text-slate-400 text-center leading-snug px-1">{requirementLabel}</p>
             </div>
           )
         }
@@ -143,7 +143,8 @@ function DocumentGrid({
             key={code}
             thumbnailUrl={`/api/editais/documento/${doc.id}/thumbnail`}
             openUrl={`/api/editais/documento/${doc.id}/link`}
-            label={doc.original_filename || label}
+            label={doc.original_filename || requirementLabel}
+            caption={requirementLabel}
             mimeType={doc.mime_type}
           />
         )
@@ -208,9 +209,9 @@ export default async function AdminEditalDetailPage({
       : null
 
   return (
-    <main className="flex-1 relative z-10 min-h-screen px-4 py-16">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div>
+    <main className="flex-1 relative z-10 min-h-screen px-4 py-12 sm:py-16">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-6 sm:p-8">
           <Link
             href="/admin/editais"
             className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4"
@@ -218,7 +219,7 @@ export default async function AdminEditalDetailPage({
             <ArrowLeft className="w-4 h-4" />
             Voltar para a lista
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-1">{submission.full_name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{submission.full_name}</h1>
           <p className="text-slate-400">
             {submission.protocol_number && (
               <span className="text-slate-300">Protocolo {submission.protocol_number} · </span>
@@ -227,7 +228,7 @@ export default async function AdminEditalDetailPage({
           </p>
 
           {evaluation && (
-            <p className="mt-3 text-sm">
+            <p className="mt-4 text-sm">
               <span
                 className={`inline-block px-3 py-1 rounded-full font-bold ${
                   evaluation.total >= EDITAL_APPROVAL_MIN_SCORE
@@ -244,7 +245,7 @@ export default async function AdminEditalDetailPage({
           )}
 
           {disqualification && (
-            <div className="mt-3 bg-red-900/20 border border-red-800/40 rounded-xl px-4 py-3">
+            <div className="mt-4 bg-red-900/20 border border-red-800/40 rounded-xl px-4 py-3">
               <p className="text-red-300 font-bold text-sm">Proposta desqualificada</p>
               <p className="text-red-300/80 text-sm mt-1">{disqualification.reason}</p>
               <p className="text-red-300/60 text-xs mt-1">
@@ -253,56 +254,59 @@ export default async function AdminEditalDetailPage({
             </div>
           )}
 
-          <div className="mt-4">
+          <div className="mt-5">
             <SubmissionActions submissionId={submission.id} evaluation={evaluation} disqualification={disqualification} />
           </div>
         </div>
 
         <Block title="Equipe" icon={<Users className="w-5 h-5" />}>
-          <dl className="space-y-4">
+          <dl className="grid gap-3">
             <Field label="Descrição da equipe" value={submission.team_description || '—'} />
           </dl>
           <DocumentGrid codes={getDocumentCodesForStep('equipe')} documentsByCode={documentsByCode} />
         </Block>
 
         <Block title="Instituição" icon={<Building2 className="w-5 h-5" />}>
-          <dl className="space-y-4">
-            <Field
-              label="Instituição"
-              value={`${submission.institution_name || '—'} (${submission.institution_cnpj || 'CNPJ não informado'})`}
-            />
-            <Field label="Laboratório" value={`${submission.lab_name || '—'} — ${submission.lab_area || '—'}`} />
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Field label="Instituição" value={submission.institution_name || '—'} />
+            <Field label="CNPJ" value={submission.institution_cnpj || 'Não informado'} />
+            <Field label="Laboratório" value={submission.lab_name || '—'} />
+            <Field label="Área" value={submission.lab_area || '—'} />
             <Field label="Unidade acadêmica" value={submission.lab_academic_unit || '—'} />
-            <Field
-              label="Descrição da estrutura do laboratório"
-              value={submission.lab_structure_description || '—'}
-            />
-            <Field label="Público atendido pelo laboratório" value={submission.lab_served_public || '—'} />
+            <Field label="Público atendido" value={submission.lab_served_public || '—'} />
+            <div className="sm:col-span-2">
+              <Field
+                label="Descrição da estrutura do laboratório"
+                value={submission.lab_structure_description || '—'}
+              />
+            </div>
           </dl>
           <DocumentGrid codes={getDocumentCodesForStep('instituicao')} documentsByCode={documentsByCode} />
         </Block>
 
         <Block title="Proposta" icon={<FileText className="w-5 h-5" />}>
-          <dl className="space-y-4">
+          <dl className="grid gap-3">
             <Field
               label="Objetivo principal da melhoria"
               value={submission.main_improvement_objective || '—'}
             />
             <Field label="Justificativa técnica" value={submission.technical_justification || '—'} />
             <Field label="Resultados esperados" value={submission.expected_results || '—'} />
-            <div>
-              <dt className="text-sm text-slate-400 mb-2">Itens de orçamento</dt>
+            <div className="rounded-2xl bg-slate-950/40 border border-slate-800/80 px-4 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                Itens de orçamento
+              </dt>
               <dd>
                 {!submission.budget_items || submission.budget_items.length === 0 ? (
-                  <span className="text-slate-200">—</span>
+                  <span className="text-slate-100">—</span>
                 ) : (
                   <ul className="space-y-2">
                     {submission.budget_items.map((item, index) => (
-                      <li key={index} className="bg-slate-900/40 rounded-xl p-3">
-                        <p className="text-slate-200 font-medium">
+                      <li key={index} className="bg-slate-900/50 rounded-xl p-3 border border-slate-800/60">
+                        <p className="text-slate-100 font-medium">
                           {item.descricao} — {formatCurrency(item.valor_estimado)}
                         </p>
-                        <p className="text-sm text-slate-400">{item.justificativa}</p>
+                        <p className="text-sm text-slate-400 mt-1">{item.justificativa}</p>
                       </li>
                     ))}
                   </ul>
@@ -314,24 +318,26 @@ export default async function AdminEditalDetailPage({
 
         <Block title="Fotos do laboratório" icon={<Camera className="w-5 h-5" />}>
           {photosPdf ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <ThumbnailCard
                 thumbnailUrl={`/api/editais/documento/${photosPdf.id}/thumbnail`}
                 openUrl={`/api/editais/documento/${photosPdf.id}/link`}
                 label={photosPdf.original_filename || 'Registro fotográfico (PDF)'}
+                caption="Registro fotográfico consolidado"
                 mimeType={photosPdf.mime_type}
               />
             </div>
           ) : photos.length === 0 ? (
             <p className="text-slate-500">Nenhuma foto enviada</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {photos.map((photo) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photos.map((photo, index) => (
                 <ThumbnailCard
                   key={photo.id}
                   thumbnailUrl={`/api/editais/documento/${photo.id}/thumbnail`}
                   openUrl={`/api/editais/documento/${photo.id}/link`}
-                  label={photo.original_filename || 'Foto do laboratório'}
+                  label={photo.original_filename || `Foto ${index + 1}`}
+                  caption={`Foto ${index + 1}`}
                   mimeType={photo.mime_type}
                   aspectClassName="aspect-square"
                 />
@@ -345,11 +351,12 @@ export default async function AdminEditalDetailPage({
         </Block>
 
         <Block title="Certificado de inscrição na comunidade" icon={<Award className="w-5 h-5" />}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <ThumbnailCard
               thumbnailUrl={`/api/editais/certificado/${submission.registration_id}/thumbnail`}
               openUrl={`/api/editais/certificado/${submission.registration_id}/link`}
               label="Certificado de inscrição"
+              caption="Certificado da comunidade"
             />
           </div>
         </Block>

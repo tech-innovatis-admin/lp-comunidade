@@ -4,7 +4,7 @@ import { FileText } from 'lucide-react'
 import DocumentUploadSlot from './DocumentUploadSlot'
 import { EditalSubmissionDocument } from '@/lib/edital-proposta-api'
 import { EDITAL_MAX_DOCUMENT_BYTES, EDITAL_MAX_TEXT_LENGTH } from '@/lib/edital-requirements'
-import { EDITAL_DOCUMENT_ACCEPT } from '@/lib/edital-document-types'
+import { EDITAL_DOCUMENT_ACCEPT, EDITAL_DOCUMENT_HELPER_TEXT } from '@/lib/edital-document-types'
 import { formatCNPJ, isValidCNPJ, onlyDigits } from '@/lib/br-documents'
 
 export type TelaInstituicaoField =
@@ -33,8 +33,6 @@ interface TelaInstituicaoProps {
 function findDocument(documents: EditalSubmissionDocument[], code: string): EditalSubmissionDocument | null {
   return documents.find((doc) => doc.requirementCode === code) ?? null
 }
-
-const DOCUMENT_HELPER_TEXT = 'Formatos aceitos: PDF, DOC e DOCX (até 10 MB)'
 
 const inputClass =
   'w-full px-6 py-4 bg-slate-900/60 border border-slate-700/50 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#22AE84]/30 focus:border-[#22AE84] transition-all font-medium'
@@ -178,7 +176,7 @@ export default function TelaInstituicao({
           token={token}
           requirementCode="8.1.5"
           label="Comprovante de inscrição e situação cadastral do CNPJ"
-          helperText={DOCUMENT_HELPER_TEXT}
+          helperText={EDITAL_DOCUMENT_HELPER_TEXT}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.5')}
@@ -190,7 +188,7 @@ export default function TelaInstituicao({
           token={token}
           requirementCode="8.1.6"
           label="Carta de anuência da instituição"
-          helperText={`Assinada por representante legal, direção, coordenação ou chefia de departamento. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Assinada por representante legal, direção, coordenação ou chefia de departamento. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.6')}
@@ -202,7 +200,7 @@ export default function TelaInstituicao({
           token={token}
           requirementCode="8.1.7"
           label="Documento de identificação do laboratório"
-          helperText={`Nome oficial, área de atuação, responsável técnico e público atendido. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Nome oficial, área de atuação, responsável técnico e público atendido. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.7')}

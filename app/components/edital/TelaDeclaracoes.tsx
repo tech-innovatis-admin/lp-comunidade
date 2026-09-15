@@ -4,7 +4,7 @@ import { FileText } from 'lucide-react'
 import DocumentUploadSlot from './DocumentUploadSlot'
 import { EditalSubmissionDocument } from '@/lib/edital-proposta-api'
 import { EDITAL_MAX_DOCUMENT_BYTES } from '@/lib/edital-requirements'
-import { EDITAL_DOCUMENT_ACCEPT } from '@/lib/edital-document-types'
+import { EDITAL_DOCUMENT_ACCEPT, EDITAL_DOCUMENT_HELPER_TEXT } from '@/lib/edital-document-types'
 
 interface TelaDeclaracoesProps {
   token: string
@@ -18,7 +18,6 @@ function findDocument(documents: EditalSubmissionDocument[], code: string): Edit
   return documents.find((doc) => doc.requirementCode === code) ?? null
 }
 
-const DOCUMENT_HELPER_TEXT = 'Formatos aceitos: PDF, DOC e DOCX (até 10 MB)'
 
 export default function TelaDeclaracoes({
   token,
@@ -65,7 +64,7 @@ export default function TelaDeclaracoes({
           token={token}
           requirementCode="8.1.15"
           label="Declaração de Responsabilidade (Anexo I)"
-          helperText={`Assinada pelo coordenador ou responsável técnico pela proposta. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Assinada pelo coordenador ou responsável técnico pela proposta. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.15')}
@@ -77,7 +76,7 @@ export default function TelaDeclaracoes({
           token={token}
           requirementCode="8.1.16"
           label="Termo de Compromisso de Contrapartida Institucional (Anexo II)"
-          helperText={`Assinado pelo laboratório ou instituição proponente. ${DOCUMENT_HELPER_TEXT}`}
+          helperText={`Assinado pelo laboratório ou instituição proponente. ${EDITAL_DOCUMENT_HELPER_TEXT}`}
           accept={EDITAL_DOCUMENT_ACCEPT}
           maxBytes={EDITAL_MAX_DOCUMENT_BYTES}
           document={findDocument(documents, '8.1.16')}
