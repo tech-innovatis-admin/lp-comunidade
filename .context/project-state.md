@@ -25,7 +25,7 @@ inferir que suporte a broker esta publicado.
 
 Spec: [upload documental e painel admin](specs/2026-09-15-edital-upload-admin-preview.md).
 Plano: [implementacao](plans/2026-09-15-edital-upload-admin-preview.md).
-Status: implementado localmente, sem commit/deploy.
+Status: implementado localmente; commit/deploy sob pedido nesta sessao.
 
 Entregas:
 - Documentais aceitam PDF/DOC/DOCX/JPG/PNG/WEBP com assinatura binaria.
